@@ -149,7 +149,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
               >
                 <div style={{ width: '100%', height: '1px', borderTop: `1px dashed ${themeColor}`, opacity: 0.3 }} />
                 <div style={{ position: 'absolute', left: '10px', background: 'rgba(15, 15, 15, 0.95)', backdropFilter: 'blur(8px)', border: `1.5px solid ${themeColor}`, padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', color: 'white', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
-                  <span style={{ color: themeColor, fontWeight: '900' }}>{pos.type} {pos.amount}</span>
+                  <span style={{ color: themeColor, fontWeight: '900' }}>{pos.type} {parseFloat(pos.amount.toFixed(8))}</span>
                   <span style={{ color: pnlColor, fontWeight: '900' }}>{pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnlPercent.toFixed(2)}%)</span>
                   <button onClick={() => handleCloseTrade(pos.id)} style={{ background: '#f23645', border: 'none', color: 'white', padding: '0.2rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900', cursor: 'pointer' }}>✕</button>
                 </div>
