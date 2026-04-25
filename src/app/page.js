@@ -26,7 +26,7 @@ export default function Home() {
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: '280px 1fr 320px', 
-        gridTemplateRows: '1fr 300px', // Chart Row and Bottom Panel Row
+        gridTemplateRows: '1fr 220px', // Slimmer Bottom Row (220px instead of 300px)
         gap: '0.75rem', 
         padding: '0.75rem',
         flex: 1,
@@ -72,17 +72,17 @@ export default function Home() {
           </div>
         </div>
 
-        {/* RIGHT: Trade Panel (Execution Only) */}
+        {/* RIGHT: Trade Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
           <TradePanel currentPrice={price} />
           <div className="glass" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '1rem', opacity: 0.8 }}>
              <div style={{ fontSize: '2rem' }}>⚡</div>
              <div style={{ fontSize: '0.9rem', fontWeight: '700' }}>Instant Execution</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Market orders are filled at best available price.</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Market orders filled instantly at best price.</div>
           </div>
         </div>
 
-        {/* EXPANDED BOTTOM PANEL: Positions & History (Spans Center and Right) */}
+        {/* EXPANDED BOTTOM PANEL: Positions & History */}
         <div className="glass" style={{ 
           gridColumn: '2 / span 2', 
           display: 'flex', 
@@ -95,11 +95,11 @@ export default function Home() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={{
-                  padding: '1.2rem 0',
+                  padding: '1rem 0',
                   background: 'none',
                   border: 'none',
                   color: activeTab === tab ? 'white' : '#666',
-                  fontSize: '0.8rem',
+                  fontSize: '0.75rem',
                   fontWeight: '700',
                   cursor: 'pointer',
                   borderBottom: activeTab === tab ? '2px solid var(--accent-primary)' : '2px solid transparent',
