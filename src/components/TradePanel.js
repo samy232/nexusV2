@@ -31,7 +31,7 @@ export default function TradePanel({ currentPrice }) {
   };
 
   return (
-    <div className="glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: '16px' }}>
+    <div className="glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', borderRadius: '16px', height: '100%', boxSizing: 'border-box' }}>
       {/* Order Type Selector */}
       <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '10px' }}>
         {['MARKET', 'LIMIT'].map(t => (

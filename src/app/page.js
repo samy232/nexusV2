@@ -73,9 +73,8 @@ export default function Home() {
         </div>
 
         {/* RIGHT: Trade Panel (Execution Zone) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <TradePanel currentPrice={price} />
-          {/* Lightning Panel Deleted */}
         </div>
 
         {/* EXPANDED BOTTOM PANEL: Positions & History */}
