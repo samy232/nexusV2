@@ -139,9 +139,13 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       backgroundColor: 'transparent',
       height: '100%',
       style: { fontFamily: 'Inter, sans-serif' },
-      panning: { enabled: true, type: 'x' },
-      zoomType: 'x',
-      // PRO ZOOM SETTINGS
+      // ENABLE DRAG TO PAN
+      panning: {
+        enabled: true,
+        type: 'x'
+      },
+      // DISABLE BOX ZOOM (to allow drag to pan)
+      zoomType: null,
       mouseWheelZoom: {
         enabled: true,
         type: 'x',
