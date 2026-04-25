@@ -1,6 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from 'react';
-import { createChart } from 'lightweight-charts';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSession } from "next-auth/react";
 
 export default function TradingViewChart({ price, history }) {
@@ -9,11 +8,33 @@ export default function TradingViewChart({ price, history }) {
   const seriesRef = useRef();
   const { data: session } = useSession();
   const priceLinesRef = useRef({});
+  const [libLoaded, setLibLoaded] = useState(false);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    // 1. Load the library from CDN
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js';
+    script.async = true;
+    script.onload = () => {
+      setLibLoaded(true);
+    };
+    document.head.appendChild(script);
 
-    // 1. Create Chart
+    return () => {
+      if (script.parentNode) {
+        document.head.removeChild(script);
+      }
+      if (chartRef.current) {
+        chartRef.current.remove();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!libLoaded || !chartContainerRef.current || !window.LightweightCharts) return;
+
+    const { createChart } = window.LightweightCharts;
+
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: 'solid', color: 'transparent' },
@@ -41,13 +62,14 @@ export default function TradingViewChart({ price, history }) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    // 2. Load History
     if (history && history.length > 0) {
       series.setData(history);
     }
 
     const handleResize = () => {
-      chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      if (chart && chartContainerRef.current) {
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -55,16 +77,20 @@ export default function TradingViewChart({ price, history }) {
     return () => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
     };
-  }, []);
+  }, [libLoaded, history]);
 
   // Update with live price
   useEffect(() => {
     if (seriesRef.current && price) {
-      seriesRef.current.update({
-        time: Math.floor(Date.now() / 1000),
-        value: price,
-      });
+      try {
+        seriesRef.current.update({
+          time: Math.floor(Date.now() / 1000),
+          value: price,
+        });
+      } catch (e) {}
     }
   }, [price]);
 
@@ -79,21 +105,23 @@ export default function TradingViewChart({ price, history }) {
 
         // Clear old lines
         Object.values(priceLinesRef.current).forEach(line => {
-          seriesRef.current.removePriceLine(line);
+          if (seriesRef.current) seriesRef.current.removePriceLine(line);
         });
         priceLinesRef.current = {};
 
         // Draw new lines
         positions.forEach(pos => {
-          const line = seriesRef.current.createPriceLine({
-            price: pos.price,
-            color: '#22ab94',
-            lineWidth: 2,
-            lineStyle: 2, // Dashed
-            axisLabelVisible: true,
-            title: `BUY ${pos.amount} @ ${pos.price}`,
-          });
-          priceLinesRef.current[pos.id] = line;
+          if (seriesRef.current) {
+            const line = seriesRef.current.createPriceLine({
+              price: pos.price,
+              color: '#22ab94',
+              lineWidth: 2,
+              lineStyle: 2,
+              axisLabelVisible: true,
+              title: `BUY ${pos.amount} @ ${pos.price}`,
+            });
+            priceLinesRef.current[pos.id] = line;
+          }
         });
       } catch (err) {
         console.error("Error drawing lines", err);
@@ -101,12 +129,17 @@ export default function TradingViewChart({ price, history }) {
     };
 
     fetchAndDrawPositions();
-    const interval = setInterval(fetchAndDrawPositions, 10000); // Sync lines every 10s
+    const interval = setInterval(fetchAndDrawPositions, 10000);
     return () => clearInterval(interval);
-  }, [session, price]); // Re-sync when session or price changes (price change might mean new trade)
+  }, [session, price]);
 
   return (
     <div className="glass" style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
+      {!libLoaded && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+          Loading professional chart engine...
+        </div>
+      )}
       <div ref={chartContainerRef} style={{ width: '100%', height: '500px' }} />
     </div>
   );
