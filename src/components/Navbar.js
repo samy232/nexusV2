@@ -15,13 +15,19 @@ export default function Navbar() {
     if (!session) return;
     try {
       const userRes = await fetch('/api/user');
-      const userData = await userRes.json();
-      setBalance(userData.balance);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setBalance(userData.balance || 0);
+      }
 
       const tradesRes = await fetch('/api/trades?status=OPEN');
-      const tradesData = await tradesRes.json();
-      setOpenPositions(tradesData);
-    } catch (e) {}
+      if (tradesRes.ok) {
+        const tradesData = await tradesRes.json();
+        setOpenPositions(tradesData || []);
+      }
+    } catch (e) {
+      console.error("Fetch financials failed", e);
+    }
   };
 
   useEffect(() => {
@@ -30,10 +36,13 @@ export default function Navbar() {
     return () => clearInterval(interval);
   }, [session]);
 
-  const totalPnL = openPositions.reduce((sum, pos) => {
-    const pnl = pos.type === 'BUY' ? (price - pos.price) * pos.amount : (pos.price - price) * pos.amount;
+  // Calculate Live Total PnL (Only if price is valid)
+  const totalPnL = (price && price > 0) ? openPositions.reduce((sum, pos) => {
+    const pnl = pos.type === 'BUY' 
+      ? (price - pos.price) * pos.amount 
+      : (pos.price - price) * pos.amount;
     return sum + pnl;
-  }, 0);
+  }, 0) : 0;
 
   const liveEquity = balance + totalPnL;
 
@@ -49,7 +58,6 @@ export default function Navbar() {
       border: '1px solid rgba(255,255,255,0.08)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-        {/* LOGO */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
           <div style={{ 
             width: '36px', height: '36px', 
@@ -64,7 +72,6 @@ export default function Navbar() {
           <span style={{ fontSize: '1.2rem', fontWeight: '900', color: 'white', letterSpacing: '-0.5px' }}>NEXUS</span>
         </Link>
 
-        {/* PRO TABS */}
         <div style={{ 
           display: 'flex', 
           background: 'rgba(0,0,0,0.2)', 
@@ -94,7 +101,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* FINANCIAL CENTER */}
       {session && (
         <div style={{ display: 'flex', gap: '3rem', alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
@@ -103,7 +109,7 @@ export default function Navbar() {
               fontSize: '1rem', fontWeight: '800', 
               color: totalPnL >= 0 ? '#22ab94' : '#f23645'
             }}>
-              ${totalPnL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {totalPnL !== 0 ? (totalPnL >= 0 ? '+' : '-') : ''}${Math.abs(totalPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
@@ -115,7 +121,6 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* USER ACTIONS */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {session ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
