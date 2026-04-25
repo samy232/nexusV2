@@ -1,6 +1,6 @@
 "use client";
 import Navbar from "@/components/Navbar";
-import TradingChart from "@/components/TradingChart";
+import TradingViewChart from "@/components/TradingViewChart";
 import TradePanel from "@/components/TradePanel";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
@@ -16,37 +16,37 @@ export default function Home() {
       
       <div style={{ 
         display: 'flex', 
-        gap: '1rem', 
-        padding: '0 1rem 1rem 1rem',
-        flex: 1,
-        overflow: 'hidden'
+        gap: '1.5rem', 
+        padding: '0 1.5rem 1.5rem 1.5rem',
+        flex: 1
       }}>
         {/* Left Side: Chart and Positions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
-          <TradingChart />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
+          <TradingViewChart />
           <PositionsPanel currentPrice={price} />
           <RecentTrades />
         </div>
 
         {/* Right Side: OrderBook and Trade Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <OrderBook />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <TradePanel currentPrice={price} />
+          <OrderBook />
         </div>
       </div>
 
       {/* Market Ticker Footer */}
       <div className="glass" style={{ 
-        margin: '0 1rem 1rem 1rem', 
-        padding: '0.75rem', 
+        margin: '0 1.5rem 1.5rem 1.5rem', 
+        padding: '1rem', 
         display: 'flex', 
-        gap: '2rem', 
+        gap: '2.5rem', 
         overflow: 'hidden',
         whiteSpace: 'nowrap',
-        fontSize: '0.75rem',
-        color: 'var(--text-secondary)'
+        fontSize: '0.8rem',
+        color: 'var(--text-secondary)',
+        fontWeight: '500'
       }}>
-        {['BTC/USDT $42,690.00 (+2.4%)', 'ETH/USDT $2,450.12 (-1.2%)', 'SOL/USDT $145.67 (+5.8%)', 'DOT/USDT $7.23 (+0.5%)', 'LINK/USDT $18.45 (-0.1%)'].map((ticker, i) => (
+        {['BTC/USDT $42,690.00 (+2.4%)', 'ETH/USDT $2,450.12 (-1.2%)', 'SOL/USDT $145.67 (+5.8%)', 'DOT/USDT $7.23 (+0.5%)', 'LINK/USDT $18.45 (-0.1%)', 'ADA/USDT $0.58 (+1.2%)', 'MATIC/USDT $0.92 (-0.5%)'].map((ticker, i) => (
           <span key={i}>{ticker}</span>
         ))}
       </div>
