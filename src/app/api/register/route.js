@@ -25,7 +25,10 @@ export async function POST(req) {
         email,
         password: hashedPassword,
         name,
-        balance: 50000.0 // Default demo balance
+        demoBalance: 1000.0,
+        liveBalance: 0.0,
+        accountType: 'DEMO',
+        leverage: 100.0
       }
     });
 
@@ -37,6 +40,7 @@ export async function POST(req) {
       } 
     });
   } catch (error) {
+    console.error("Registration error:", error);
     return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
   }
 }
