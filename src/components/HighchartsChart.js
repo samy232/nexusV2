@@ -8,13 +8,12 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const chartComponentRef = useRef(null);
   const { data: session } = useSession();
   const [positions, setPositions] = useState([]);
-  const [activeInterval, setActiveInterval] = useState('1M');
+  const [activeInterval, setActiveInterval] = useState('1m');
   const customElementsRef = useRef([]);
 
   // Initialize modules only on the client
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Highcharts === 'object') {
-      // Use dynamic require to avoid SSR issues
       try {
         const MouseWheelZoom = require('highcharts/modules/mouse-wheel-zoom');
         if (typeof MouseWheelZoom === 'function') {
@@ -70,12 +69,12 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         ? (price - pos.price) * pos.amount 
         : (pos.price - price) * pos.amount;
       const pnlPercent = (pnl / (pos.price * pos.amount)) * 100;
-      const color = pos.type === 'BUY' ? '#22ab94' : '#f23645';
+      const themeColor = pos.type === 'BUY' ? '#22ab94' : '#f23645';
 
-      const labelText = `${pos.type} ${pos.amount}  ${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%  ✕`;
-      
-      const label = chart.renderer.label(
-        labelText,
+      // 1. INFO BADGE (Type, Amount, PnL)
+      const infoText = `${pos.type} ${pos.amount}  ${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%`;
+      const infoBadge = chart.renderer.label(
+        infoText,
         chart.plotLeft + 5,
         y - 12,
         'rect',
@@ -84,21 +83,46 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         true
       )
       .attr({
-        fill: color,
-        padding: 5,
+        fill: 'rgba(15, 15, 15, 0.9)',
+        stroke: themeColor,
+        'stroke-width': 1,
+        padding: 6,
         r: 4,
         zIndex: 10
       })
       .css({
         color: 'white',
         fontSize: '10px',
-        fontWeight: '800',
+        fontWeight: '700'
+      })
+      .add();
+
+      // 2. SEPARATE RED CLOSE BUTTON
+      const closeButton = chart.renderer.label(
+        '✕',
+        chart.plotLeft + infoBadge.width + 10, // Small gap after info badge
+        y - 12,
+        'rect',
+        null,
+        null,
+        true
+      )
+      .attr({
+        fill: '#f23645',
+        padding: 6,
+        r: 4,
+        zIndex: 10
+      })
+      .css({
+        color: 'white',
+        fontSize: '10px',
+        fontWeight: '900',
         cursor: 'pointer'
       })
       .on('click', () => handleCloseTrade(pos.id))
       .add();
 
-      customElementsRef.current.push(label);
+      customElementsRef.current.push(infoBadge, closeButton);
     });
   };
 
