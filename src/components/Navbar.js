@@ -129,7 +129,21 @@ export default function Navbar() {
             </div>
 
             {showProfileMenu && (
-              <div className="glass" style={{ position: 'absolute', top: '120%', right: 0, width: '240px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 200 }}>
+              <div style={{ 
+                position: 'absolute', 
+                top: '120%', 
+                right: 0, 
+                width: '240px', 
+                padding: '1rem', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '1rem', 
+                background: '#0a0a0a', // Solid Dark Background
+                border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.8)', 
+                zIndex: 200 
+              }}>
                 <div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '700' }}>ACCOUNT MODE</div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
