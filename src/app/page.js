@@ -1,18 +1,14 @@
 "use client";
-import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
+import HighchartsChart from "@/components/HighchartsChart";
 import TradePanel from "@/components/TradePanel";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import PositionsPanel from "@/components/PositionsPanel";
 import { usePriceFeed } from "@/hooks/usePriceFeed";
 
-const TradingViewChart = dynamic(() => import("@/components/TradingViewChart"), {
-  ssr: false,
-});
-
 export default function Home() {
-  const { price } = usePriceFeed();
+  const { price, history } = usePriceFeed();
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -26,7 +22,7 @@ export default function Home() {
       }}>
         {/* Left Side: Chart and Positions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
-          <TradingViewChart />
+          <HighchartsChart price={price} history={history} />
           <PositionsPanel currentPrice={price} />
           <RecentTrades />
         </div>
