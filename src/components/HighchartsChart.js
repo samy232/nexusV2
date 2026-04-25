@@ -73,11 +73,11 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       const themeColor = pos.type === 'BUY' ? '#22ab94' : '#f23645';
       const pnlColor = pnl >= 0 ? '#22ab94' : '#f23645';
 
-      // 1. INFO BADGE with HTML for color-coded PnL
+      // 1. INFO BADGE with Type-Specific Frame Color
       const infoHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="opacity: 0.8;">${pos.type} ${pos.amount}</span>
-          <span style="color: ${pnlColor}; font-weight: 900;">
+          <span style="color: ${themeColor}; font-weight: 900; opacity: 1;">${pos.type} ${pos.amount}</span>
+          <span style="color: ${pnlColor}; font-weight: 900; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 3px;">
             ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)
           </span>
         </div>
@@ -90,12 +90,12 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         'rect',
         null,
         null,
-        true // useHTML is essential here
+        true
       )
       .attr({
         fill: 'rgba(15, 15, 15, 0.95)',
-        stroke: 'rgba(255, 255, 255, 0.1)',
-        'stroke-width': 1,
+        stroke: themeColor, // FRAME COLOR (Green for Buy, Red for Sell)
+        'stroke-width': 1.5,
         padding: 6,
         r: 6,
         zIndex: 10
