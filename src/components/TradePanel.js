@@ -1,8 +1,57 @@
 "use client";
 import { useState } from 'react';
+import { useSession } from "next-auth/react";
 
 export default function TradePanel() {
+  const { data: session } = useSession();
   const [type, setType] = useState('buy');
+  const [price, setPrice] = useState(42690);
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  const handleSubmit = async () => {
+    if (!session) {
+      setStatus({ type: 'error', message: 'Please sign in to trade' });
+      return;
+    }
+
+    if (!amount || amount <= 0) {
+      setStatus({ type: 'error', message: 'Enter a valid amount' });
+      return;
+    }
+
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      const res = await fetch('/api/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: 'BTC/USDT',
+          type: type.toUpperCase(),
+          amount: parseFloat(amount),
+          price: parseFloat(price)
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStatus({ type: 'success', message: 'Order placed successfully!' });
+        setAmount('');
+      } else {
+        setStatus({ type: 'error', message: data.error || 'Failed to place order' });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', message: 'Network error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const total = (parseFloat(amount || 0) * price).toFixed(2);
 
   return (
     <div className="glass" style={{ width: '320px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -46,7 +95,8 @@ export default function TradePanel() {
           <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Price (USDT)</label>
           <input 
             type="number" 
-            defaultValue="42690"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             className="glass"
             style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', color: 'white', outline: 'none' }}
           />
@@ -56,6 +106,8 @@ export default function TradePanel() {
           <input 
             type="number" 
             placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             className="glass"
             style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--card-border)', color: 'white', outline: 'none' }}
           />
@@ -69,21 +121,39 @@ export default function TradePanel() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600' }}>
           <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-          <span>$0.00</span>
+          <span>${total}</span>
         </div>
       </div>
 
-      <button style={{
-        padding: '1rem',
-        borderRadius: '8px',
-        border: 'none',
-        background: type === 'buy' ? 'var(--accent-primary)' : 'var(--accent-danger)',
-        color: type === 'buy' ? 'black' : 'white',
-        fontWeight: '800',
-        cursor: 'pointer',
-        fontSize: '1rem'
-      }}>
-        {type === 'buy' ? 'Place Buy Order' : 'Place Sell Order'}
+      {status && (
+        <div style={{ 
+          fontSize: '0.875rem', 
+          textAlign: 'center', 
+          color: status.type === 'success' ? 'var(--accent-primary)' : 'var(--accent-danger)',
+          padding: '0.5rem',
+          borderRadius: '4px',
+          background: 'rgba(255,255,255,0.02)'
+        }}>
+          {status.message}
+        </div>
+      )}
+
+      <button 
+        onClick={handleSubmit}
+        disabled={loading}
+        style={{
+          padding: '1rem',
+          borderRadius: '8px',
+          border: 'none',
+          background: type === 'buy' ? 'var(--accent-primary)' : 'var(--accent-danger)',
+          color: type === 'buy' ? 'black' : 'white',
+          fontWeight: '800',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          fontSize: '1rem',
+          opacity: loading ? 0.7 : 1
+        }}
+      >
+        {loading ? 'Processing...' : (type === 'buy' ? 'Place Buy Order' : 'Place Sell Order')}
       </button>
     </div>
   );

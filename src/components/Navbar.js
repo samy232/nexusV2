@@ -1,7 +1,10 @@
 "use client";
-import { Search, Bell, User, Wallet } from "lucide-react";
+import { Search, Bell, User, Wallet, LogIn } from "lucide-react";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 export default function Navbar() {
+  const { data: session } = useSession();
+
   return (
     <nav className="glass" style={{
       display: 'flex',
@@ -47,25 +50,47 @@ export default function Navbar() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-primary)' }}>
-          <Wallet size={18} />
-          <span style={{ fontWeight: '600' }}>$42,690.00</span>
-        </div>
-        <div style={{ position: 'relative', cursor: 'pointer' }}>
-          <Bell size={20} color="var(--text-secondary)" />
-          <span style={{ 
-            position: 'absolute', 
-            top: -2, 
-            right: -2, 
-            width: 8, 
-            height: 8, 
-            background: 'var(--accent-danger)', 
-            borderRadius: '50%' 
-          }} />
-        </div>
-        <div className="glass" style={{ padding: '0.4rem', borderRadius: '50%', cursor: 'pointer' }}>
-          <User size={20} />
-        </div>
+        {session ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-primary)' }}>
+              <Wallet size={18} />
+              <span style={{ fontWeight: '600' }}>${session.user.balance?.toLocaleString() || '0.00'}</span>
+            </div>
+            <div style={{ position: 'relative', cursor: 'pointer' }}>
+              <Bell size={20} color="var(--text-secondary)" />
+              <span style={{ 
+                position: 'absolute', 
+                top: -2, 
+                right: -2, 
+                width: 8, 
+                height: 8, 
+                background: 'var(--accent-danger)', 
+                borderRadius: '50%' 
+              }} />
+            </div>
+            <div className="glass" style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => signOut()}>
+              <User size={20} />
+              <span style={{ fontSize: '0.875rem' }}>{session.user.name || session.user.email}</span>
+            </div>
+          </>
+        ) : (
+          <button 
+            onClick={() => signIn()}
+            className="glass" 
+            style={{ 
+              padding: '0.5rem 1rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              cursor: 'pointer',
+              color: 'var(--accent-primary)',
+              fontWeight: '600'
+            }}
+          >
+            <LogIn size={18} />
+            Sign In
+          </button>
+        )}
       </div>
     </nav>
   );
