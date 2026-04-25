@@ -1,4 +1,5 @@
 "use client";
+import { useState } from 'react';
 import Navbar from "@/components/Navbar";
 import HighchartsChart from "@/components/HighchartsChart";
 import TradePanel from "@/components/TradePanel";
@@ -8,7 +9,8 @@ import PositionsPanel from "@/components/PositionsPanel";
 import { usePriceFeed } from "@/hooks/usePriceFeed";
 
 export default function Home() {
-  const { price, history } = usePriceFeed();
+  const [interval, setInterval] = useState('1m');
+  const { price, history } = usePriceFeed('BTCUSDT', interval);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -22,7 +24,11 @@ export default function Home() {
       }}>
         {/* Left Side: Chart and Positions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
-          <HighchartsChart price={price} history={history} />
+          <HighchartsChart 
+            price={price} 
+            history={history} 
+            onIntervalChange={setInterval}
+          />
           <PositionsPanel currentPrice={price} />
           <RecentTrades />
         </div>
