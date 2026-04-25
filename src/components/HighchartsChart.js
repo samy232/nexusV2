@@ -10,9 +10,9 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const priceLinesRef = useRef({});
   const [libLoaded, setLibLoaded] = useState(false);
   const [activeInterval, setActiveInterval] = useState('1m');
+  const historyLoadedRef = useRef(false);
 
   useEffect(() => {
-    // 1. Load the official TradingView Standalone library
     if (window.LightweightCharts) {
       setLibLoaded(true);
       return;
@@ -43,26 +43,33 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 550,
+      height: 600,
       timeScale: {
         timeVisible: true,
         secondsVisible: true,
         borderColor: 'rgba(255,255,255,0.1)',
+        shiftVisibleRangeOnNewBar: true, // Follow latest price only if we are at the end
       },
       rightPriceScale: {
         borderColor: 'rgba(255,255,255,0.1)',
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
-        },
+        autoScale: true, // Start with auto-scale
+        mode: 0, // Normal price scale
       },
       crosshair: {
-        mode: 0, // Normal crosshair
+        mode: 0,
         vertLine: { color: '#758696', width: 1, style: 1 },
         horzLine: { color: '#758696', width: 1, style: 1 },
       },
-      handleScroll: true,
-      handleScale: true, // This enables axis scaling!
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true, // Allow dragging
+        horzTouchDrag: true,
+        vertTouchDrag: true,
+      },
+      handleScale: {
+        mouseWheel: true,
+        axisPressedMouseMove: true, // Allow axis dragging
+      },
     });
 
     const series = chart.addCandlestickSeries({
@@ -76,17 +83,6 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    if (history && history.length > 0) {
-      const formatted = history.map(d => ({
-        time: Math.floor(d[0] / 1000),
-        open: d[1],
-        high: d[2],
-        low: d[3],
-        close: d[4]
-      }));
-      series.setData(formatted);
-    }
-
     const handleResize = () => {
       chart.applyOptions({ width: chartContainerRef.current.clientWidth });
     };
@@ -99,7 +95,36 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       chartRef.current = null;
       seriesRef.current = null;
     };
-  }, [libLoaded, history]);
+  }, [libLoaded]);
+
+  // Load History ONLY ONCE or when interval changes
+  useEffect(() => {
+    if (seriesRef.current && history && history.length > 0) {
+      const formatted = history.map(d => ({
+        time: Math.floor(d[0] / 1000),
+        open: d[1],
+        high: d[2],
+        low: d[3],
+        close: d[4]
+      }));
+      seriesRef.current.setData(formatted);
+      historyLoadedRef.current = true;
+    }
+  }, [libLoaded, activeInterval, history.length > 0 ? history[0][0] : null]); // Only reload if first timestamp changes
+
+  // STREAM live price updates (This prevents the "Refresh" jump)
+  useEffect(() => {
+    if (seriesRef.current && price && history && history.length > 0) {
+      const last = history[history.length - 1];
+      seriesRef.current.update({
+        time: Math.floor(last[0] / 1000),
+        open: last[1],
+        high: last[2],
+        low: last[3],
+        close: last[4]
+      });
+    }
+  }, [price]);
 
   // Update position lines
   useEffect(() => {
@@ -110,13 +135,11 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         const res = await fetch('/api/trades?status=OPEN');
         const positions = await res.json();
 
-        // Clear old lines
         Object.values(priceLinesRef.current).forEach(line => {
           if (seriesRef.current) seriesRef.current.removePriceLine(line);
         });
         priceLinesRef.current = {};
 
-        // Draw new lines
         positions.forEach(pos => {
           const pnl = pos.type === 'BUY' 
             ? (price - pos.price) * pos.amount 
@@ -129,7 +152,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
               price: pos.price,
               color: color,
               lineWidth: 1,
-              lineStyle: 2, // Dashed
+              lineStyle: 2,
               axisLabelVisible: true,
               title: `${pos.type} ${pos.amount} | ${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%`,
             });
@@ -144,18 +167,19 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     return () => clearInterval(interval);
   }, [session, price]);
 
-  const handleIntervalClick = (val) => {
+  const handleIntervalChangeClick = (val) => {
     setActiveInterval(val);
+    historyLoadedRef.current = false; // Allow history reload for new interval
     if (onIntervalChange) onIntervalChange(val.toLowerCase());
   };
 
   return (
-    <div className="glass" style={{ padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+    <div className="glass" style={{ padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem', height: '100%' }}>
       <div style={{ display: 'flex', gap: '0.5rem', padding: '0 0.5rem', zIndex: 20 }}>
         {['1m', '5m', '15m', '1h', '1D'].map(int => (
           <button
             key={int}
-            onClick={() => handleIntervalClick(int)}
+            onClick={() => handleIntervalChangeClick(int)}
             style={{
               padding: '0.4rem 0.8rem',
               borderRadius: '6px',
@@ -172,7 +196,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         ))}
       </div>
 
-      <div ref={chartContainerRef} style={{ width: '100%', height: '550px' }} />
+      <div ref={chartContainerRef} style={{ width: '100%', flex: 1 }} />
     </div>
   );
 }
