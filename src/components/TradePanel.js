@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 
 export default function TradePanel({ currentPrice }) {
   const { data: session } = useSession();
-  const [amount, setAmount] = useState(1);
+  const [amount, setAmount] = useState(0.01);
   const [orderType, setOrderType] = useState('MARKET');
 
   const handleTrade = async (type) => {
@@ -64,23 +64,24 @@ export default function TradePanel({ currentPrice }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', padding: '0.25rem' }}>
           <button 
-            onClick={() => setAmount(Math.max(1, amount - 1))}
+            onClick={() => setAmount(Math.max(0.01, parseFloat((amount - 0.01).toFixed(2))))}
             style={{ width: '40px', height: '40px', border: 'none', background: 'none', color: 'white', fontSize: '1.2rem', cursor: 'pointer' }}
           >-</button>
           <input 
             type="number" 
             value={amount}
-            onChange={(e) => setAmount(parseFloat(e.target.value) || 1)}
+            step="0.01"
+            onChange={(e) => setAmount(parseFloat(e.target.value) || 0.01)}
             style={{ flex: 1, background: 'none', border: 'none', color: 'white', textAlign: 'center', fontSize: '1.1rem', fontWeight: '800', outline: 'none' }}
           />
           <button 
-            onClick={() => setAmount(amount + 1)}
+            onClick={() => setAmount(parseFloat((amount + 0.01).toFixed(2)))}
             style={{ width: '40px', height: '40px', border: 'none', background: 'none', color: 'white', fontSize: '1.2rem', cursor: 'pointer' }}
           >+</button>
         </div>
       </div>
 
-      {/* Leverage Info (Visual only for now) */}
+      {/* Leverage Info */}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
         <span>Leverage</span>
         <span style={{ color: 'var(--accent-primary)' }}>100x</span>
