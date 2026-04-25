@@ -12,6 +12,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const [libLoaded, setLibLoaded] = useState(false);
   const [activeInterval, setActiveInterval] = useState('1m');
 
+  // 1. Library Loader (Pinned once)
   useEffect(() => {
     if (window.LightweightCharts) {
       setLibLoaded(true);
@@ -22,14 +23,11 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     script.async = true;
     script.onload = () => setLibLoaded(true);
     document.head.appendChild(script);
-
-    return () => {
-      if (script.parentNode) document.head.removeChild(script);
-    };
   }, []);
 
+  // 2. Chart Builder (Runs ONLY ONCE)
   useEffect(() => {
-    if (!libLoaded || !chartContainerRef.current || !window.LightweightCharts) return;
+    if (!libLoaded || !chartContainerRef.current || !window.LightweightCharts || chartRef.current) return;
 
     const chart = window.LightweightCharts.createChart(chartContainerRef.current, {
       layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#d1d4dc' },
@@ -50,7 +48,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    // DIRECT DOM SYNC: Update label positions without React re-renders
+    // Direct DOM sync function
     const syncLabels = () => {
       if (!seriesRef.current || !labelsContainerRef.current) return;
       const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
@@ -70,21 +68,21 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     chart.timeScale().subscribeVisibleTimeRangeChange(syncLabels);
 
     const handleResize = () => {
-      chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      syncLabels();
+      if (chartRef.current && chartContainerRef.current) {
+        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
+        syncLabels();
+      }
     };
     window.addEventListener('resize', handleResize);
-
-    // Initial sync delay to allow chart to settle
-    setTimeout(syncLabels, 100);
 
     return () => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
+      chartRef.current = null;
     };
-  }, [libLoaded, positions]); // Only rebuild if positions change
+  }, [libLoaded]);
 
-  // Load History & Stream Updates
+  // 3. Load History & Stream Updates (Decoupled)
   useEffect(() => {
     if (seriesRef.current && history && history.length > 0) {
       const formatted = history.map(d => ({
@@ -101,7 +99,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         time: Math.floor(last[0] / 1000), open: last[1], high: last[2], low: last[3], close: last[4]
       });
       
-      // Fast sync labels on price tick
+      // Update badge positions on price tick
       if (!labelsContainerRef.current) return;
       const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
       labelEls.forEach(el => {
@@ -112,7 +110,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     }
   }, [price]);
 
-  // Fetch Positions
+  // 4. Position Tracker (Decoupled)
   useEffect(() => {
     const fetchPositions = async () => {
       if (!session) return;
@@ -130,8 +128,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const handleCloseTrade = async (tradeId) => {
     try {
       await fetch('/api/trades/close', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tradeId, exitPrice: price })
       });
       setPositions(prev => prev.filter(p => p.id !== tradeId));
@@ -151,7 +148,6 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       <div style={{ position: 'relative', flex: 1 }}>
         <div ref={chartContainerRef} style={{ width: '100%', height: '600px' }} />
         
-        {/* LIQUID-SMOOTH DOM OVERLAY */}
         <div ref={labelsContainerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           {positions.map(pos => {
             const pnl = pos.type === 'BUY' ? (price - pos.price) * pos.amount : (pos.price - price) * pos.amount;
@@ -160,47 +156,13 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
             const pnlColor = pnl >= 0 ? '#22ab94' : '#f23645';
 
             return (
-              <div 
-                key={pos.id} 
-                data-trade-id={pos.id} 
-                data-price={pos.price}
-                style={{ 
-                  position: 'absolute', 
-                  left: '0', 
-                  top: '0', 
-                  width: '100%',
-                  marginTop: '-12px', // Centering offset
-                  display: 'none', // Initially hidden until synced
-                  alignItems: 'center', 
-                  zIndex: 30, 
-                  pointerEvents: 'none',
-                  willChange: 'transform',
-                  transition: 'none'
-                }}
+              <div key={pos.id} data-trade-id={pos.id} data-price={pos.price}
+                style={{ position: 'absolute', left: '0', top: '0', width: '100%', marginTop: '-12px', display: 'flex', alignItems: 'center', zIndex: 30, pointerEvents: 'none', willChange: 'transform' }}
               >
                 <div style={{ width: '100%', height: '1px', borderTop: `1px dashed ${themeColor}`, opacity: 0.3 }} />
-                <div style={{ 
-                  position: 'absolute',
-                  left: '10px',
-                  background: 'rgba(15, 15, 15, 0.95)', 
-                  backdropFilter: 'blur(8px)', 
-                  border: `1.5px solid ${themeColor}`, 
-                  padding: '0.3rem 0.6rem', 
-                  borderRadius: '6px', 
-                  fontSize: '0.7rem', 
-                  color: 'white', 
-                  fontWeight: '600', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.6rem', 
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)', 
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'auto'
-                }}>
+                <div style={{ position: 'absolute', left: '10px', background: 'rgba(15, 15, 15, 0.95)', backdropFilter: 'blur(8px)', border: `1.5px solid ${themeColor}`, padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', color: 'white', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
                   <span style={{ color: themeColor, fontWeight: '900' }}>{pos.type} {pos.amount}</span>
-                  <span style={{ color: pnlColor, fontWeight: '900' }}>
-                    {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnlPercent.toFixed(2)}%)
-                  </span>
+                  <span style={{ color: pnlColor, fontWeight: '900' }}>{pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnlPercent.toFixed(2)}%)</span>
                   <button onClick={() => handleCloseTrade(pos.id)} style={{ background: '#f23645', border: 'none', color: 'white', padding: '0.2rem 0.4rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '900', cursor: 'pointer' }}>✕</button>
                 </div>
               </div>
