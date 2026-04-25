@@ -60,15 +60,21 @@ export async function POST(req) {
   }
 }
 
-export async function GET() {
+export async function GET(req) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get('status');
+
   const trades = await prisma.trade.findMany({
-    where: { userId: session.user.id },
+    where: { 
+      userId: session.user.id,
+      ...(status ? { status } : {})
+    },
     orderBy: { timestamp: 'desc' },
     take: 20
   });

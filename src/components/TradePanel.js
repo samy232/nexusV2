@@ -1,14 +1,18 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from "next-auth/react";
 
-export default function TradePanel() {
+export default function TradePanel({ currentPrice }) {
   const { data: session } = useSession();
   const [type, setType] = useState('buy');
-  const [price, setPrice] = useState(42690);
+  const [price, setPrice] = useState(currentPrice || 42690);
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (currentPrice && !price) setPrice(currentPrice);
+  }, [currentPrice]);
 
   const handleSubmit = async () => {
     if (!session) {

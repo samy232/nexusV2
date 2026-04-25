@@ -1,9 +1,11 @@
 "use client";
 import { Search, Bell, User, Wallet, LogIn } from "lucide-react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { usePriceFeed } from "@/hooks/usePriceFeed";
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const { price, change } = usePriceFeed();
 
   return (
     <nav className="glass" style={{
@@ -30,22 +32,25 @@ export default function Navbar() {
         <div className="glass" style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '0.5rem', 
-          padding: '0.5rem 1rem',
+          gap: '1rem', 
+          padding: '0.5rem 1.5rem',
           fontSize: '0.875rem'
         }}>
-          <Search size={16} color="var(--text-secondary)" />
-          <input 
-            type="text" 
-            placeholder="Search assets..." 
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: 'white', 
-              outline: 'none',
-              width: '200px'
-            }} 
-          />
+          <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>BTC/USDT</span>
+          <span style={{ 
+            color: change >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)',
+            fontWeight: '700',
+            fontFamily: 'monospace'
+          }}>
+            ${price?.toLocaleString() || '---'}
+          </span>
+          <span style={{ 
+            fontSize: '0.75rem',
+            color: change >= 0 ? 'var(--accent-primary)' : 'var(--accent-danger)',
+            opacity: 0.8
+          }}>
+            {change >= 0 ? '+' : ''}{change}%
+          </span>
         </div>
       </div>
 

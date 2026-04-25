@@ -1,10 +1,15 @@
+"use client";
 import Navbar from "@/components/Navbar";
 import TradingChart from "@/components/TradingChart";
 import TradePanel from "@/components/TradePanel";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
+import PositionsPanel from "@/components/PositionsPanel";
+import { usePriceFeed } from "@/hooks/usePriceFeed";
 
 export default function Home() {
+  const { price } = usePriceFeed();
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
@@ -16,16 +21,17 @@ export default function Home() {
         flex: 1,
         overflow: 'hidden'
       }}>
-        {/* Left Side: Chart and Market Info */}
+        {/* Left Side: Chart and Positions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
           <TradingChart />
+          <PositionsPanel currentPrice={price} />
           <RecentTrades />
         </div>
 
         {/* Right Side: OrderBook and Trade Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <OrderBook />
-          <TradePanel />
+          <TradePanel currentPrice={price} />
         </div>
       </div>
 

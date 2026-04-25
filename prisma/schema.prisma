@@ -13,7 +13,7 @@ model User {
   email         String?   @unique
   password      String?
   image         String?
-  balance       Float     @default(50000.0) // Initial demo balance
+  balance       Float     @default(50000.0)
   trades        Trade[]
   orders        Order[]
   createdAt     DateTime  @default(now())
@@ -24,10 +24,13 @@ model Trade {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-  symbol    String   // e.g., "BTC/USDT"
+  symbol    String
   type      String   // "BUY" or "SELL"
+  status    String   @default("OPEN") // "OPEN" or "CLOSED"
   amount    Float
-  price     Float
+  price     Float    // Entry Price
+  exitPrice Float?   // Exit Price
+  pnl       Float?   // Profit/Loss
   total     Float
   timestamp DateTime @default(now())
 }
@@ -37,8 +40,8 @@ model Order {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   symbol    String
-  type      String   // "BUY" or "SELL"
-  status    String   // "PENDING", "COMPLETED", "CANCELLED"
+  type      String
+  status    String
   amount    Float
   price     Float
   createdAt DateTime @default(now())
