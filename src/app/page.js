@@ -1,12 +1,17 @@
 "use client";
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Navbar from "@/components/Navbar";
-import HighchartsChart from "@/components/HighchartsChart";
 import TradePanel from "@/components/TradePanel";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import PositionsPanel from "@/components/PositionsPanel";
 import { usePriceFeed } from "@/hooks/usePriceFeed";
+
+// Dynamically import chart to prevent SSR errors
+const HighchartsChart = dynamic(() => import("@/components/HighchartsChart"), {
+  ssr: false,
+});
 
 export default function Home() {
   const [interval, setInterval] = useState('1m');

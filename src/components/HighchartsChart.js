@@ -2,20 +2,29 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
-import MouseWheelZoom from 'highcharts/modules/mouse-wheel-zoom';
 import { useSession } from "next-auth/react";
-
-// Initialize modules
-if (typeof Highcharts === 'object' && typeof window !== 'undefined') {
-  MouseWheelZoom(Highcharts);
-}
 
 export default function HighchartsChart({ price, history, onIntervalChange }) {
   const chartComponentRef = useRef(null);
   const { data: session } = useSession();
   const [positions, setPositions] = useState([]);
-  const [activeInterval, setActiveInterval] = useState('1m');
+  const [activeInterval, setActiveInterval] = useState('1M');
   const customElementsRef = useRef([]);
+
+  // Initialize modules only on the client
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof Highcharts === 'object') {
+      // Use dynamic require to avoid SSR issues
+      try {
+        const MouseWheelZoom = require('highcharts/modules/mouse-wheel-zoom');
+        if (typeof MouseWheelZoom === 'function') {
+          MouseWheelZoom(Highcharts);
+        }
+      } catch (e) {
+        console.warn("Highcharts module load failed", e);
+      }
+    }
+  }, []);
 
   const fetchPositions = async () => {
     if (!session) return;
