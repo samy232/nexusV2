@@ -51,7 +51,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       backgroundColor: 'transparent',
       height: 600,
       style: { fontFamily: 'Inter, sans-serif' },
-      spacingRight: 100 // Room for labels
+      spacingLeft: 20 // Added space for left labels
     },
     title: { text: null },
     credits: { enabled: false },
@@ -103,15 +103,10 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     }]
   };
 
-  const handleIntervalClick = (val) => {
-    setActiveInterval(val);
-    if (onIntervalChange) onIntervalChange(val);
-  };
-
-  // Helper to get Y pixel for a price
   const getYPos = (p) => {
     if (!chartComponentRef.current) return -100;
     const chart = chartComponentRef.current.chart;
+    if (!chart || !chart.yAxis[0]) return -100;
     return chart.yAxis[0].toPixels(p) - chart.plotTop;
   };
 
@@ -122,7 +117,10 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         {intervals.map(int => (
           <button
             key={int.value}
-            onClick={() => handleIntervalClick(int.value)}
+            onClick={() => {
+              setActiveInterval(int.value);
+              if (onIntervalChange) onIntervalChange(int.value);
+            }}
             style={{
               padding: '0.4rem 0.8rem',
               borderRadius: '6px',
@@ -147,7 +145,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
           ref={chartComponentRef}
         />
 
-        {/* Position Labels Overlay */}
+        {/* Position Labels Overlay - LEFT SIDE */}
         {positions.map(pos => {
           const y = getYPos(pos.price);
           if (y < 0 || y > 600) return null;
@@ -160,49 +158,68 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
           return (
             <div key={pos.id} style={{
               position: 'absolute',
-              right: '10px',
-              top: `${y + 40}px`, // Offset for chart title/controls
+              left: '10px',
+              top: `${y + 45}px`, // Adjusted for cleaner alignment
               transform: 'translateY(-50%)',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
               zIndex: 10,
               pointerEvents: 'auto'
             }}>
               <div style={{
-                background: pos.type === 'BUY' ? 'rgba(34, 171, 148, 0.9)' : 'rgba(242, 54, 69, 0.9)',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '4px',
-                fontSize: '0.75rem',
+                background: 'rgba(15, 15, 15, 0.8)',
+                backdropFilter: 'blur(8px)',
+                border: `1px solid ${pos.type === 'BUY' ? 'rgba(34, 171, 148, 0.5)' : 'rgba(242, 54, 69, 0.5)'}`,
+                padding: '0.3rem 0.6rem',
+                borderRadius: '6px',
+                fontSize: '0.7rem',
                 color: 'white',
-                fontWeight: '700',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                fontWeight: '600',
                 display: 'flex',
-                gap: '0.5rem',
+                alignItems: 'center',
+                gap: '0.6rem',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
                 whiteSpace: 'nowrap'
               }}>
-                <span>{pos.type} {pos.amount}</span>
-                <span style={{ opacity: 0.8 }}>|</span>
-                <span style={{ color: pnl >= 0 ? '#afffe4' : '#ffd1d1' }}>
-                  {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnlPercent.toFixed(2)}%)
+                <span style={{ 
+                  color: pos.type === 'BUY' ? '#22ab94' : '#f23645',
+                  fontWeight: '800'
+                }}>
+                  {pos.type} {pos.amount}
                 </span>
+                
+                <span style={{ 
+                  color: pnl >= 0 ? '#22ab94' : '#f23645',
+                  fontFamily: 'monospace'
+                }}>
+                  {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+                </span>
+
+                <button 
+                  onClick={() => handleCloseTrade(pos.id)}
+                  style={{
+                    background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
+                    border: 'none',
+                    color: 'white',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '4px',
+                    fontSize: '0.65rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    marginLeft: '4px'
+                  }}
+                >
+                  ✕
+                </button>
               </div>
-              <button 
-                onClick={() => handleCloseTrade(pos.id)}
-                style={{
-                  background: 'white',
-                  border: 'none',
-                  color: 'black',
-                  padding: '0.4rem 0.6rem',
-                  borderRadius: '4px',
-                  fontSize: '0.7rem',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                }}
-              >
-                CLOSE
-              </button>
+              
+              {/* Connector Line to the chart */}
+              <div style={{
+                width: '10px',
+                height: '1px',
+                background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
+                opacity: 0.5
+              }} />
             </div>
           );
         })}
