@@ -12,7 +12,6 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const [libLoaded, setLibLoaded] = useState(false);
   const [activeInterval, setActiveInterval] = useState('1m');
 
-  // 1. Library Loader (Pinned once)
   useEffect(() => {
     if (window.LightweightCharts) {
       setLibLoaded(true);
@@ -25,7 +24,6 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     document.head.appendChild(script);
   }, []);
 
-  // 2. Chart Builder (Runs ONLY ONCE)
   useEffect(() => {
     if (!libLoaded || !chartContainerRef.current || !window.LightweightCharts || chartRef.current) return;
 
@@ -48,41 +46,40 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    // Direct DOM sync function
-    const syncLabels = () => {
-      if (!seriesRef.current || !labelsContainerRef.current) return;
-      const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
-      labelEls.forEach(el => {
-        const p = parseFloat(el.getAttribute('data-price'));
-        const y = seriesRef.current.priceToCoordinate(p);
-        if (y !== null) {
-          el.style.transform = `translateY(${y}px)`;
-          el.style.display = 'flex';
-        } else {
-          el.style.display = 'none';
-        }
-      });
+    // IRON-GRIP SYNC: RequestAnimationFrame loop for perfect "glued" behavior
+    let requestRef;
+    const syncLoop = () => {
+      if (seriesRef.current && labelsContainerRef.current) {
+        const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
+        labelEls.forEach(el => {
+          const p = parseFloat(el.getAttribute('data-price'));
+          const y = seriesRef.current.priceToCoordinate(p);
+          if (y !== null) {
+            el.style.transform = `translateY(${y}px)`;
+            el.style.visibility = 'visible';
+          } else {
+            el.style.visibility = 'hidden';
+          }
+        });
+      }
+      requestRef = requestAnimationFrame(syncLoop);
     };
-
-    chart.timeScale().subscribeVisibleLogicalRangeChange(syncLabels);
-    chart.timeScale().subscribeVisibleTimeRangeChange(syncLabels);
+    requestRef = requestAnimationFrame(syncLoop);
 
     const handleResize = () => {
-      if (chartRef.current && chartContainerRef.current) {
-        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
-        syncLabels();
-      }
+      if (chartRef.current) chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(requestRef);
       chart.remove();
       chartRef.current = null;
     };
   }, [libLoaded]);
 
-  // 3. Load History & Stream Updates (Decoupled)
+  // Load History & Stream Updates
   useEffect(() => {
     if (seriesRef.current && history && history.length > 0) {
       const formatted = history.map(d => ({
@@ -98,19 +95,10 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       seriesRef.current.update({
         time: Math.floor(last[0] / 1000), open: last[1], high: last[2], low: last[3], close: last[4]
       });
-      
-      // Update badge positions on price tick
-      if (!labelsContainerRef.current) return;
-      const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
-      labelEls.forEach(el => {
-        const p = parseFloat(el.getAttribute('data-price'));
-        const y = seriesRef.current.priceToCoordinate(p);
-        if (y !== null) el.style.transform = `translateY(${y}px)`;
-      });
     }
   }, [price]);
 
-  // 4. Position Tracker (Decoupled)
+  // Fetch Positions
   useEffect(() => {
     const fetchPositions = async () => {
       if (!session) return;
