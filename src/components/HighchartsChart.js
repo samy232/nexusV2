@@ -69,39 +69,49 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         ? (price - pos.price) * pos.amount 
         : (pos.price - price) * pos.amount;
       const pnlPercent = (pnl / (pos.price * pos.amount)) * 100;
+      
       const themeColor = pos.type === 'BUY' ? '#22ab94' : '#f23645';
+      const pnlColor = pnl >= 0 ? '#22ab94' : '#f23645';
 
-      // 1. INFO BADGE (Type, Amount, PnL)
-      const infoText = `${pos.type} ${pos.amount}  ${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%`;
+      // 1. INFO BADGE with HTML for color-coded PnL
+      const infoHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="opacity: 0.8;">${pos.type} ${pos.amount}</span>
+          <span style="color: ${pnlColor}; font-weight: 900;">
+            ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)
+          </span>
+        </div>
+      `;
+
       const infoBadge = chart.renderer.label(
-        infoText,
+        infoHTML,
         chart.plotLeft + 5,
-        y - 12,
+        y - 14,
         'rect',
         null,
         null,
-        true
+        true // useHTML is essential here
       )
       .attr({
-        fill: 'rgba(15, 15, 15, 0.9)',
-        stroke: themeColor,
+        fill: 'rgba(15, 15, 15, 0.95)',
+        stroke: 'rgba(255, 255, 255, 0.1)',
         'stroke-width': 1,
         padding: 6,
-        r: 4,
+        r: 6,
         zIndex: 10
       })
       .css({
         color: 'white',
         fontSize: '10px',
-        fontWeight: '700'
+        fontWeight: '600'
       })
       .add();
 
       // 2. SEPARATE RED CLOSE BUTTON
       const closeButton = chart.renderer.label(
         '✕',
-        chart.plotLeft + infoBadge.width + 10, // Small gap after info badge
-        y - 12,
+        chart.plotLeft + infoBadge.width + 10,
+        y - 14,
         'rect',
         null,
         null,
@@ -110,7 +120,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       .attr({
         fill: '#f23645',
         padding: 6,
-        r: 4,
+        r: 6,
         zIndex: 10
       })
       .css({
@@ -155,7 +165,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       opposite: true,
       plotLines: positions.map(pos => ({
         value: pos.price,
-        color: pos.type === 'BUY' ? '#22ab94' : '#f23645',
+        color: pos.type === 'BUY' ? 'rgba(34, 171, 148, 0.4)' : 'rgba(242, 54, 69, 0.4)',
         dashStyle: 'Dash',
         width: 1,
         zIndex: 5
