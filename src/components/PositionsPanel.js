@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from "next-auth/react";
 
-export default function PositionsPanel({ currentPrice }) {
+export default function PositionsPanel({ currentPrice, currentSymbol }) {
   const { data: session } = useSession();
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -11,7 +11,10 @@ export default function PositionsPanel({ currentPrice }) {
     if (!session) return;
     const res = await fetch('/api/trades?status=OPEN');
     const data = await res.json();
-    if (Array.isArray(data)) setPositions(data);
+    if (Array.isArray(data)) {
+      // Filter by current symbol so positions don't bleed across markets
+      setPositions(currentSymbol ? data.filter(p => p.symbol === currentSymbol) : data);
+    }
   };
 
   useEffect(() => {

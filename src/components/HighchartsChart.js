@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSession } from "next-auth/react";
 
-export default function HighchartsChart({ price, history, onIntervalChange }) {
+export default function HighchartsChart({ price, history, symbol, onIntervalChange }) {
   const chartContainerRef = useRef();
   const chartRef = useRef();
   const seriesRef = useRef();
@@ -79,15 +79,19 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     };
   }, [libLoaded]);
 
-  // Load History & Stream Updates
+  // Load History & AUTO-FIT when symbol or interval changes
   useEffect(() => {
     if (seriesRef.current && history && history.length > 0) {
       const formatted = history.map(d => ({
         time: Math.floor(d[0] / 1000), open: d[1], high: d[2], low: d[3], close: d[4]
-      }));
+      })).filter(d => d.open != null);
       seriesRef.current.setData(formatted);
+      // Auto-fit so new symbol is always perfectly visible
+      setTimeout(() => {
+        if (chartRef.current) chartRef.current.timeScale().fitContent();
+      }, 50);
     }
-  }, [libLoaded, activeInterval, history.length > 0 ? history[0][0] : null]);
+  }, [symbol, activeInterval, history.length > 0 ? history[0][0] : null]);
 
   useEffect(() => {
     if (seriesRef.current && price && history && history.length > 0) {
@@ -98,20 +102,21 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     }
   }, [price]);
 
-  // Fetch Positions
+  // Fetch Positions filtered by current symbol
   useEffect(() => {
     const fetchPositions = async () => {
       if (!session) return;
       try {
         const res = await fetch('/api/trades?status=OPEN');
         const data = await res.json();
-        setPositions(data);
+        // Only show positions for the currently viewed symbol
+        setPositions(Array.isArray(data) ? data.filter(p => p.symbol === symbol) : []);
       } catch (e) {}
     };
     fetchPositions();
     const interval = setInterval(fetchPositions, 5000);
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, symbol]);
 
   const handleCloseTrade = async (tradeId) => {
     try {

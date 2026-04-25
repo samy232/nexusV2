@@ -90,7 +90,7 @@ export default function Home() {
             ))}
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {activeTab === 'positions' ? <PositionsPanel currentPrice={price} /> : <RecentTrades />}
+            {activeTab === 'positions' ? <PositionsPanel currentPrice={price} currentSymbol={selectedSymbol} /> : <RecentTrades />}
           </div>
         </div>
       </div>
