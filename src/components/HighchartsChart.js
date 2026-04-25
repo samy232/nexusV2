@@ -73,7 +73,6 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       const themeColor = pos.type === 'BUY' ? '#22ab94' : '#f23645';
       const pnlColor = pnl >= 0 ? '#22ab94' : '#f23645';
 
-      // 1. INFO BADGE with Type-Specific Frame Color
       const infoHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: ${themeColor}; font-weight: 900; opacity: 1;">${pos.type} ${pos.amount}</span>
@@ -94,7 +93,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       )
       .attr({
         fill: 'rgba(15, 15, 15, 0.95)',
-        stroke: themeColor, // FRAME COLOR (Green for Buy, Red for Sell)
+        stroke: themeColor,
         'stroke-width': 1.5,
         padding: 6,
         r: 6,
@@ -107,7 +106,6 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       })
       .add();
 
-      // 2. SEPARATE RED CLOSE BUTTON
       const closeButton = chart.renderer.label(
         '✕',
         chart.plotLeft + infoBadge.width + 10,
@@ -139,10 +137,16 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const options = {
     chart: {
       backgroundColor: 'transparent',
-      height: 600,
+      height: '100%',
       style: { fontFamily: 'Inter, sans-serif' },
       panning: { enabled: true, type: 'x' },
       zoomType: 'x',
+      // PRO ZOOM SETTINGS
+      mouseWheelZoom: {
+        enabled: true,
+        type: 'x',
+        sensitivity: 2
+      },
       events: {
         render: function() {
           renderCustomLabels(this);
@@ -157,7 +161,8 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     xAxis: {
       gridLineColor: 'rgba(255,255,255,0.03)',
       lineColor: 'rgba(255,255,255,0.1)',
-      labels: { style: { color: '#666' } }
+      labels: { style: { color: '#666' } },
+      crosshair: { color: 'rgba(255,255,255,0.2)', dashStyle: 'Dash' }
     },
     yAxis: {
       gridLineColor: 'rgba(255,255,255,0.03)',
@@ -176,7 +181,8 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         color: '#f23645',
         upColor: '#22ab94',
         lineColor: '#f23645',
-        upLineColor: '#22ab94'
+        upLineColor: '#22ab94',
+        pointPadding: 0.1
       }
     },
     series: [{
@@ -189,7 +195,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   };
 
   return (
-    <div className="glass" style={{ padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+    <div className="glass" style={{ height: '100%', padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       <div style={{ display: 'flex', gap: '0.5rem', padding: '0 0.5rem', zIndex: 20 }}>
         {['1m', '5m', '15m', '1h', '1D'].map(int => (
           <button
@@ -214,12 +220,15 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
         ))}
       </div>
 
-      <HighchartsReact
-        highcharts={Highcharts}
-        constructorType={'stockChart'}
-        options={options}
-        ref={chartComponentRef}
-      />
+      <div style={{ flex: 1 }}>
+        <HighchartsReact
+          highcharts={Highcharts}
+          constructorType={'stockChart'}
+          options={options}
+          ref={chartComponentRef}
+          containerProps={{ style: { height: '100%', width: '100%' } }}
+        />
+      </div>
     </div>
   );
 }
