@@ -26,7 +26,7 @@ export default function Home() {
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: '280px 1fr 320px', 
-        gridTemplateRows: '1fr 220px', // Slimmer Bottom Row (220px instead of 300px)
+        gridTemplateRows: '1fr 220px', 
         gap: '0.75rem', 
         padding: '0.75rem',
         flex: 1,
@@ -72,14 +72,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* RIGHT: Trade Panel */}
+        {/* RIGHT: Trade Panel (Execution Zone) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
           <TradePanel currentPrice={price} />
-          <div className="glass" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '1rem', opacity: 0.8 }}>
-             <div style={{ fontSize: '2rem' }}>⚡</div>
-             <div style={{ fontSize: '0.9rem', fontWeight: '700' }}>Instant Execution</div>
-             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Market orders filled instantly at best price.</div>
-          </div>
+          {/* Lightning Panel Deleted */}
         </div>
 
         {/* EXPANDED BOTTOM PANEL: Positions & History */}
