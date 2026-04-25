@@ -10,7 +10,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const [positions, setPositions] = useState([]);
   const [libLoaded, setLibLoaded] = useState(false);
   const [activeInterval, setActiveInterval] = useState('1m');
-  const [labelCoords, setLabelCoords] = useState({}); // Track Y-pixels for labels
+  const [labelCoords, setLabelCoords] = useState({});
 
   useEffect(() => {
     if (window.LightweightCharts) {
@@ -50,31 +50,40 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    // Sync label coordinates during scroll/zoom/resize
-    const syncCoords = () => {
-      if (!seriesRef.current || !positions.length) return;
+    // HIGH-SPEED SYNC: Track coordinates constantly during any interaction
+    const sync = () => {
+      if (!seriesRef.current) return;
       const coords = {};
+      let changed = false;
       positions.forEach(pos => {
         const y = seriesRef.current.priceToCoordinate(pos.price);
-        if (y !== null) coords[pos.id] = y;
+        if (y !== null) {
+          coords[pos.id] = y;
+          changed = true;
+        }
       });
-      setLabelCoords(coords);
+      if (changed) setLabelCoords(coords);
     };
 
-    chart.timeScale().subscribeVisibleLogicalRangeChange(syncCoords);
-    chart.priceScale('right').applyOptions({ autoScale: true });
+    // Subscriptions for all types of movement
+    chart.timeScale().subscribeVisibleLogicalRangeChange(sync);
+    chart.timeScale().subscribeVisibleTimeRangeChange(sync);
+    
+    // Safety interval for extra smoothness
+    const syncInterval = setInterval(sync, 50);
 
     const handleResize = () => {
       chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      syncCoords();
+      sync();
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      clearInterval(syncInterval);
       chart.remove();
     };
-  }, [libLoaded, positions.length]);
+  }, [libLoaded, positions]); // Recalculate if positions change
 
   // Load History & Stream Updates
   useEffect(() => {
@@ -92,16 +101,8 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       seriesRef.current.update({
         time: Math.floor(last[0] / 1000), open: last[1], high: last[2], low: last[3], close: last[4]
       });
-      
-      // Update label coordinates on every price tick to keep them smooth
-      const coords = {};
-      positions.forEach(pos => {
-        const y = seriesRef.current.priceToCoordinate(pos.price);
-        if (y !== null) coords[pos.id] = y;
-      });
-      setLabelCoords(coords);
     }
-  }, [price, positions]);
+  }, [price]);
 
   // Fetch Positions
   useEffect(() => {
@@ -142,8 +143,8 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       <div style={{ position: 'relative', flex: 1 }}>
         <div ref={chartContainerRef} style={{ width: '100%', height: '600px' }} />
         
-        {/* RESTORED PREMIUM POSITION LABELS */}
-        <div style={{ position: 'absolute', left: '0', top: '0', bottom: '0', right: '0', pointerEvents: 'none' }}>
+        {/* BOLTED POSITION LABELS */}
+        <div style={{ position: 'absolute', left: '0', top: '0', bottom: '0', right: '0', pointerEvents: 'none', overflow: 'hidden' }}>
           {positions.map(pos => {
             const y = labelCoords[pos.id];
             if (y === undefined || y < 0 || y > 600) return null;
@@ -154,11 +155,39 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
             const pnlColor = pnl >= 0 ? '#22ab94' : '#f23645';
 
             return (
-              <div key={pos.id} style={{ position: 'absolute', left: '10px', top: `${y}px`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', zIndex: 30, pointerEvents: 'auto' }}>
-                {/* Horizontal Dashed Line */}
-                <div style={{ position: 'absolute', left: '0', right: '-1000px', height: '1px', borderTop: `1px dashed ${themeColor}`, opacity: 0.3, zIndex: -1 }} />
+              <div key={pos.id} style={{ 
+                position: 'absolute', 
+                left: '0', 
+                top: `${y}px`, 
+                width: '100%',
+                transform: 'translateY(-50%)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                zIndex: 30, 
+                pointerEvents: 'none' 
+              }}>
+                {/* Visual Line Segment */}
+                <div style={{ width: '100%', height: '1px', borderTop: `1px dashed ${themeColor}`, opacity: 0.3 }} />
                 
-                <div style={{ background: 'rgba(15, 15, 15, 0.95)', backdropFilter: 'blur(8px)', border: `1.5px solid ${themeColor}`, padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', color: 'white', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.6rem', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
+                {/* Badge (Interactive) */}
+                <div style={{ 
+                  position: 'absolute',
+                  left: '10px',
+                  background: 'rgba(15, 15, 15, 0.95)', 
+                  backdropFilter: 'blur(8px)', 
+                  border: `1.5px solid ${themeColor}`, 
+                  padding: '0.3rem 0.6rem', 
+                  borderRadius: '6px', 
+                  fontSize: '0.7rem', 
+                  color: 'white', 
+                  fontWeight: '600', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.6rem', 
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.5)', 
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'auto'
+                }}>
                   <span style={{ color: themeColor, fontWeight: '900' }}>{pos.type} {pos.amount}</span>
                   <span style={{ color: pnlColor, fontWeight: '900' }}>
                     {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnlPercent.toFixed(2)}%)
