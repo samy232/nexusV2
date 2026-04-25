@@ -1,11 +1,15 @@
 "use client";
+import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
-import TradingViewChart from "@/components/TradingViewChart";
 import TradePanel from "@/components/TradePanel";
 import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import PositionsPanel from "@/components/PositionsPanel";
 import { usePriceFeed } from "@/hooks/usePriceFeed";
+
+const TradingViewChart = dynamic(() => import("@/components/TradingViewChart"), {
+  ssr: false,
+});
 
 export default function Home() {
   const { price, history } = usePriceFeed();

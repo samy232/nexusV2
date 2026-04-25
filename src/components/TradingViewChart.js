@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart } from 'lightweight-charts';
 import { useSession } from "next-auth/react";
 
 export default function TradingViewChart({ price, history }) {
@@ -16,7 +16,7 @@ export default function TradingViewChart({ price, history }) {
     // 1. Create Chart
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
+        background: { type: 'solid', color: 'transparent' },
         textColor: '#d1d4dc',
       },
       grid: {
