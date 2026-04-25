@@ -12,7 +12,7 @@ const TradingViewChart = dynamic(() => import("@/components/TradingViewChart"), 
 });
 
 export default function Home() {
-  const { price, history } = usePriceFeed();
+  const { price } = usePriceFeed();
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -26,7 +26,7 @@ export default function Home() {
       }}>
         {/* Left Side: Chart and Positions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
-          <TradingViewChart price={price} history={history} />
+          <TradingViewChart />
           <PositionsPanel currentPrice={price} />
           <RecentTrades />
         </div>
