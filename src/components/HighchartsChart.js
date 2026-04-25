@@ -6,11 +6,11 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   const chartContainerRef = useRef();
   const chartRef = useRef();
   const seriesRef = useRef();
+  const labelsContainerRef = useRef();
   const { data: session } = useSession();
   const [positions, setPositions] = useState([]);
   const [libLoaded, setLibLoaded] = useState(false);
   const [activeInterval, setActiveInterval] = useState('1m');
-  const [labelCoords, setLabelCoords] = useState({});
 
   useEffect(() => {
     if (window.LightweightCharts) {
@@ -50,40 +50,39 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    // HIGH-SPEED SYNC: Track coordinates constantly during any interaction
-    const sync = () => {
-      if (!seriesRef.current) return;
-      const coords = {};
-      let changed = false;
-      positions.forEach(pos => {
-        const y = seriesRef.current.priceToCoordinate(pos.price);
+    // DIRECT DOM SYNC: Update label positions without React re-renders
+    const syncLabels = () => {
+      if (!seriesRef.current || !labelsContainerRef.current) return;
+      const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
+      labelEls.forEach(el => {
+        const p = parseFloat(el.getAttribute('data-price'));
+        const y = seriesRef.current.priceToCoordinate(p);
         if (y !== null) {
-          coords[pos.id] = y;
-          changed = true;
+          el.style.transform = `translateY(${y}px)`;
+          el.style.display = 'flex';
+        } else {
+          el.style.display = 'none';
         }
       });
-      if (changed) setLabelCoords(coords);
     };
 
-    // Subscriptions for all types of movement
-    chart.timeScale().subscribeVisibleLogicalRangeChange(sync);
-    chart.timeScale().subscribeVisibleTimeRangeChange(sync);
-    
-    // Safety interval for extra smoothness
-    const syncInterval = setInterval(sync, 50);
+    chart.timeScale().subscribeVisibleLogicalRangeChange(syncLabels);
+    chart.timeScale().subscribeVisibleTimeRangeChange(syncLabels);
 
     const handleResize = () => {
       chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      sync();
+      syncLabels();
     };
     window.addEventListener('resize', handleResize);
 
+    // Initial sync delay to allow chart to settle
+    setTimeout(syncLabels, 100);
+
     return () => {
       window.removeEventListener('resize', handleResize);
-      clearInterval(syncInterval);
       chart.remove();
     };
-  }, [libLoaded, positions]); // Recalculate if positions change
+  }, [libLoaded, positions]); // Only rebuild if positions change
 
   // Load History & Stream Updates
   useEffect(() => {
@@ -100,6 +99,15 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       const last = history[history.length - 1];
       seriesRef.current.update({
         time: Math.floor(last[0] / 1000), open: last[1], high: last[2], low: last[3], close: last[4]
+      });
+      
+      // Fast sync labels on price tick
+      if (!labelsContainerRef.current) return;
+      const labelEls = labelsContainerRef.current.querySelectorAll('[data-trade-id]');
+      labelEls.forEach(el => {
+        const p = parseFloat(el.getAttribute('data-price'));
+        const y = seriesRef.current.priceToCoordinate(p);
+        if (y !== null) el.style.transform = `translateY(${y}px)`;
       });
     }
   }, [price]);
@@ -143,33 +151,34 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       <div style={{ position: 'relative', flex: 1 }}>
         <div ref={chartContainerRef} style={{ width: '100%', height: '600px' }} />
         
-        {/* BOLTED POSITION LABELS */}
-        <div style={{ position: 'absolute', left: '0', top: '0', bottom: '0', right: '0', pointerEvents: 'none', overflow: 'hidden' }}>
+        {/* LIQUID-SMOOTH DOM OVERLAY */}
+        <div ref={labelsContainerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
           {positions.map(pos => {
-            const y = labelCoords[pos.id];
-            if (y === undefined || y < 0 || y > 600) return null;
-            
             const pnl = pos.type === 'BUY' ? (price - pos.price) * pos.amount : (pos.price - price) * pos.amount;
             const pnlPercent = (pnl / (pos.price * pos.amount)) * 100;
             const themeColor = pos.type === 'BUY' ? '#22ab94' : '#f23645';
             const pnlColor = pnl >= 0 ? '#22ab94' : '#f23645';
 
             return (
-              <div key={pos.id} style={{ 
-                position: 'absolute', 
-                left: '0', 
-                top: `${y}px`, 
-                width: '100%',
-                transform: 'translateY(-50%)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                zIndex: 30, 
-                pointerEvents: 'none' 
-              }}>
-                {/* Visual Line Segment */}
+              <div 
+                key={pos.id} 
+                data-trade-id={pos.id} 
+                data-price={pos.price}
+                style={{ 
+                  position: 'absolute', 
+                  left: '0', 
+                  top: '0', 
+                  width: '100%',
+                  marginTop: '-12px', // Centering offset
+                  display: 'none', // Initially hidden until synced
+                  alignItems: 'center', 
+                  zIndex: 30, 
+                  pointerEvents: 'none',
+                  willChange: 'transform',
+                  transition: 'none'
+                }}
+              >
                 <div style={{ width: '100%', height: '1px', borderTop: `1px dashed ${themeColor}`, opacity: 0.3 }} />
-                
-                {/* Badge (Interactive) */}
                 <div style={{ 
                   position: 'absolute',
                   left: '10px',
