@@ -11,9 +11,14 @@ export default function TradingViewChart({ price, history }) {
   const [libLoaded, setLibLoaded] = useState(false);
 
   useEffect(() => {
-    // 1. Load the library from CDN
+    // 1. Load the library from CDN (Pinned stable version 4.1.1)
+    if (window.LightweightCharts) {
+      setLibLoaded(true);
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js';
+    script.src = 'https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js';
     script.async = true;
     script.onload = () => {
       setLibLoaded(true);
@@ -24,62 +29,69 @@ export default function TradingViewChart({ price, history }) {
       if (script.parentNode) {
         document.head.removeChild(script);
       }
-      if (chartRef.current) {
-        chartRef.current.remove();
-      }
     };
   }, []);
 
   useEffect(() => {
     if (!libLoaded || !chartContainerRef.current || !window.LightweightCharts) return;
 
-    const { createChart } = window.LightweightCharts;
+    try {
+      const { createChart } = window.LightweightCharts;
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: 'solid', color: 'transparent' },
-        textColor: '#d1d4dc',
-      },
-      grid: {
-        vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
-        horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: 500,
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: true,
-      },
-    });
+      const chart = createChart(chartContainerRef.current, {
+        layout: {
+          background: { type: 'solid', color: 'transparent' },
+          textColor: '#d1d4dc',
+        },
+        grid: {
+          vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+          horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+        },
+        width: chartContainerRef.current.clientWidth,
+        height: 500,
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: true,
+        },
+      });
 
-    const series = chart.addAreaSeries({
-      lineColor: '#2962FF',
-      topColor: '#2962FF',
-      bottomColor: 'rgba(41, 98, 255, 0.28)',
-      lineWidth: 2,
-    });
-
-    chartRef.current = chart;
-    seriesRef.current = series;
-
-    if (history && history.length > 0) {
-      series.setData(history);
-    }
-
-    const handleResize = () => {
-      if (chart && chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      // Verify the method exists on this version
+      if (typeof chart.addAreaSeries !== 'function') {
+        console.error("Critical: addAreaSeries is missing even in standalone build", Object.keys(chart));
+        return;
       }
-    };
 
-    window.addEventListener('resize', handleResize);
+      const series = chart.addAreaSeries({
+        lineColor: '#2962FF',
+        topColor: '#2962FF',
+        bottomColor: 'rgba(41, 98, 255, 0.28)',
+        lineWidth: 2,
+      });
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
-    };
+      chartRef.current = chart;
+      seriesRef.current = series;
+
+      if (history && history.length > 0) {
+        series.setData(history);
+      }
+
+      const handleResize = () => {
+        if (chart && chartContainerRef.current) {
+          chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        chart.remove();
+        chartRef.current = null;
+        seriesRef.current = null;
+      };
+    } catch (err) {
+      console.error("Chart build failed", err);
+    }
   }, [libLoaded, history]);
 
   // Update with live price
@@ -137,7 +149,7 @@ export default function TradingViewChart({ price, history }) {
     <div className="glass" style={{ position: 'relative', overflow: 'hidden', borderRadius: '12px' }}>
       {!libLoaded && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-          Loading professional chart engine...
+          Syncing with market engine...
         </div>
       )}
       <div ref={chartContainerRef} style={{ width: '100%', height: '500px' }} />
