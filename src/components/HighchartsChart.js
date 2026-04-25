@@ -2,10 +2,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
+import MouseWheelZoom from 'highcharts/modules/mouse-wheel-zoom';
 import { useSession } from "next-auth/react";
 
-if (typeof Highcharts === 'object') {
-  require('highcharts/modules/mouse-wheel-zoom')(Highcharts);
+// Initialize modules
+if (typeof Highcharts === 'object' && typeof window !== 'undefined') {
+  MouseWheelZoom(Highcharts);
 }
 
 export default function HighchartsChart({ price, history, onIntervalChange }) {
@@ -43,10 +45,10 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     }
   };
 
-  // Custom rendering logic to draw badges on the lines
   const renderCustomLabels = (chart) => {
-    // 1. Clear previous elements
-    customElementsRef.current.forEach(el => el.destroy());
+    customElementsRef.current.forEach(el => {
+      if (el && el.destroy) el.destroy();
+    });
     customElementsRef.current = [];
 
     if (!positions || positions.length === 0) return;
@@ -61,17 +63,16 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       const pnlPercent = (pnl / (pos.price * pos.amount)) * 100;
       const color = pos.type === 'BUY' ? '#22ab94' : '#f23645';
 
-      // Draw Label Badge
       const labelText = `${pos.type} ${pos.amount}  ${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%  ✕`;
       
       const label = chart.renderer.label(
         labelText,
         chart.plotLeft + 5,
-        y - 12, // Center vertically (label height is ~24px)
+        y - 12,
         'rect',
         null,
         null,
-        true // useHTML
+        true
       )
       .attr({
         fill: color,
