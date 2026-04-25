@@ -1,63 +1,99 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { getSymbolInfo } from '@/lib/symbols';
 
-export function usePriceFeed(symbol = 'BTCUSDT', interval = '1m') {
-  const [price, setPrice] = useState(null);
-  const [change, setChange] = useState(0);
-  const [history, setHistory] = useState([]); // Will store OHLC data: [timestamp, open, high, low, close]
+export function usePriceFeed(symbolId, interval = '1m') {
+  const [price, setPrice] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [quote, setQuote] = useState({});
+  const wsRef = useRef(null);
+  const symbolInfo = getSymbolInfo(symbolId);
 
+  // Fetch OHLC History from our unified API
   useEffect(() => {
-    // 1. Fetch initial OHLC history (klines)
+    if (!symbolId) return;
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=200`);
+        const res = await fetch(`/api/market/history?symbol=${symbolId}&interval=${interval}`);
         const data = await res.json();
-        const formatted = data.map(d => [
-          d[0], // Timestamp
-          parseFloat(d[1]), // Open
-          parseFloat(d[2]), // High
-          parseFloat(d[3]), // Low
-          parseFloat(d[4])  // Close
-        ]);
-        setHistory(formatted);
-        if (formatted.length > 0) setPrice(formatted[formatted.length - 1][4]);
-      } catch (err) {
-        console.error("Failed to fetch history", err);
+        if (data.history) setHistory(data.history);
+      } catch (e) {
+        console.error('History fetch failed:', e);
       }
     };
-
     fetchHistory();
+  }, [symbolId, interval]);
 
-    // 2. Setup WebSocket for live updates
-    const wsSymbol = symbol.toLowerCase();
-    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${wsSymbol}@kline_${interval}`);
+  // Live price streaming
+  useEffect(() => {
+    if (!symbolId || !symbolInfo) return;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const k = data.k; // Kline data
-      
-      const newPrice = parseFloat(k.c);
-      setPrice(newPrice);
-      
-      // Update history with the latest kline (real-time candle formation)
-      setHistory(prev => {
-        const last = prev[prev.length - 1];
-        const current = [k.t, parseFloat(k.o), parseFloat(k.h), parseFloat(k.l), parseFloat(k.c)];
-        
-        if (last && last[0] === k.t) {
-          // Update current candle
-          const newHistory = [...prev];
-          newHistory[newHistory.length - 1] = current;
-          return newHistory;
-        } else {
-          // New candle started
-          return [...prev, current].slice(-200);
-        }
-      });
+    // Clean up previous connection
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    if (symbolInfo.source === 'binance') {
+      // CRYPTO: Use Binance WebSocket for real-time ticks
+      const streamSymbol = symbolId.toLowerCase();
+      const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${streamSymbol}@kline_${interval}`);
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        const kline = msg.k;
+        setPrice(parseFloat(kline.c));
+        setHistory(prev => {
+          if (!prev.length) return prev;
+          const last = prev[prev.length - 1];
+          const klineTime = kline.t;
+          const updated = [...prev];
+          if (last[0] === klineTime) {
+            updated[updated.length - 1] = [klineTime, parseFloat(kline.o), parseFloat(kline.h), parseFloat(kline.l), parseFloat(kline.c)];
+          } else {
+            updated.push([klineTime, parseFloat(kline.o), parseFloat(kline.h), parseFloat(kline.l), parseFloat(kline.c)]);
+          }
+          return updated;
+        });
+      };
+
+      ws.onerror = (e) => console.error('WS error:', e);
+      wsRef.current = ws;
+
+    } else {
+      // FOREX/METALS: Poll our price API every 2 seconds
+      const fetchPrice = async () => {
+        try {
+          const res = await fetch(`/api/market/price?symbol=${symbolId}`);
+          const data = await res.json();
+          if (data.price) {
+            setPrice(data.price);
+            setQuote(data);
+            // Update last candle in history
+            setHistory(prev => {
+              if (!prev.length) return prev;
+              const now = Date.now();
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              updated[updated.length - 1] = [last[0], last[1], Math.max(last[2], data.price), Math.min(last[3], data.price), data.price];
+              return updated;
+            });
+          }
+        } catch (e) {}
+      };
+
+      fetchPrice();
+      const interval_id = setInterval(fetchPrice, 2000);
+      return () => clearInterval(interval_id);
+    }
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
+  }, [symbolId, interval]);
 
-    return () => ws.close();
-  }, [symbol, interval]);
-
-  return { price, change, history };
+  return { price, history, quote };
 }

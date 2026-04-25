@@ -1,45 +1,111 @@
 "use client";
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { SYMBOL_CATEGORIES } from '@/lib/symbols';
 
-export default function Watchlist() {
-  const assets = [
-    { symbol: 'BTC/USDT', price: '42,690.00', change: '+2.4%' },
-    { symbol: 'ETH/USDT', price: '2,324.41', change: '-1.1%' },
-    { symbol: 'SOL/USDT', price: '98.50', change: '+5.7%' },
-    { symbol: 'DOT/USDT', price: '7.20', change: '-0.4%' },
-    { symbol: 'LINK/USDT', price: '18.10', change: '+3.2%' },
-  ];
+function SymbolRow({ symbol, isActive, onSelect }) {
+  const [quote, setQuote] = useState(null);
+
+  useEffect(() => {
+    const fetchQuote = async () => {
+      try {
+        const res = await fetch(`/api/market/price?symbol=${symbol.id}`);
+        const data = await res.json();
+        if (data.price) setQuote(data);
+      } catch (e) {}
+    };
+    fetchQuote();
+    const interval = setInterval(fetchQuote, 5000);
+    return () => clearInterval(interval);
+  }, [symbol.id]);
+
+  const isPositive = (quote?.changePercent || 0) >= 0;
 
   return (
-    <div className="glass" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', fontWeight: '700', fontSize: '0.9rem' }}>
-        Market Watchlist
+    <div
+      onClick={() => onSelect(symbol.id)}
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.6rem 0.75rem',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        background: isActive ? 'rgba(34, 171, 148, 0.1)' : 'transparent',
+        border: isActive ? '1px solid rgba(34, 171, 148, 0.3)' : '1px solid transparent',
+        transition: 'all 0.15s',
+      }}
+      className="hover-bright"
+    >
+      <div>
+        <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'white' }}>{symbol.display}</div>
+        <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginTop: '1px' }}>{symbol.name}</div>
       </div>
-      <div style={{ overflowY: 'auto', flex: 1 }}>
-        {assets.map((asset, i) => (
-          <div key={i} style={{ 
-            padding: '1rem', 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            borderBottom: '1px solid rgba(255,255,255,0.02)',
-            cursor: 'pointer',
-            transition: 'background 0.2s'
-          }} className="hover-bright">
-            <div>
-              <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{asset.symbol}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>24h Vol: $1.2B</div>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'white' }}>
+          {quote?.price
+            ? symbol.id.includes('USDT') || ['EURUSD','GBPUSD','AUDUSD','USDCAD'].includes(symbol.id)
+              ? quote.price < 10 ? quote.price.toFixed(5) : quote.price.toFixed(2)
+              : quote.price.toFixed(2)
+            : '—'}
+        </div>
+        {quote && (
+          <div style={{ fontSize: '0.65rem', color: isPositive ? '#22ab94' : '#f23645', marginTop: '1px' }}>
+            {isPositive ? '+' : ''}{quote.changePercent?.toFixed(2)}%
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function Watchlist({ activeSymbol, onSymbolSelect }) {
+  const [collapsed, setCollapsed] = useState({});
+
+  const toggleCategory = (key) => {
+    setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <div className="glass" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: '12px' }}>
+      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', fontWeight: '800', fontSize: '0.8rem', color: 'white' }}>
+        Market Watch
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+        {Object.entries(SYMBOL_CATEGORIES).map(([key, category]) => (
+          <div key={key} style={{ marginBottom: '0.5rem' }}>
+            {/* Category Header */}
+            <div
+              onClick={() => toggleCategory(key)}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.4rem 0.5rem',
+                cursor: 'pointer',
+                borderRadius: '6px',
+              }}
+            >
+              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: category.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                {category.label}
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)' }}>
+                {collapsed[key] ? '▶' : '▼'}
+              </span>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{asset.price}</div>
-              <div style={{ 
-                fontSize: '0.7rem', 
-                color: asset.change.startsWith('+') ? '#22ab94' : '#f23645',
-                fontWeight: '700'
-              }}>
-                {asset.change}
+
+            {/* Symbol Rows */}
+            {!collapsed[key] && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {category.symbols.map(symbol => (
+                  <SymbolRow
+                    key={symbol.id}
+                    symbol={symbol}
+                    isActive={activeSymbol === symbol.id}
+                    onSelect={onSymbolSelect}
+                  />
+                ))}
               </div>
-            </div>
+            )}
           </div>
         ))}
       </div>
