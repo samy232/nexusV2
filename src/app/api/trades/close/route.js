@@ -1,56 +1,53 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 
 export async function POST(req) {
   const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { tradeId, exitPrice } = await req.json();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Get the trade
-      const trade = await tx.trade.findUnique({
-        where: { id: tradeId }
-      });
+    const { tradeId, exitPrice } = await req.json();
 
-      if (!trade || trade.userId !== session.user.id || trade.status !== 'OPEN') {
-        throw new Error('Invalid trade or already closed');
-      }
+    const trade = await prisma.trade.findUnique({
+      where: { id: tradeId },
+      include: { user: true }
+    });
 
-      // 2. Calculate PnL
-      const pnl = (exitPrice - trade.price) * trade.amount;
-      
-      // 3. Update trade
-      await tx.trade.update({
+    if (!trade || trade.status === 'CLOSED') {
+      return NextResponse.json({ error: 'Trade not found or already closed' }, { status: 404 });
+    }
+
+    const pnl = trade.type === 'BUY' 
+      ? (exitPrice - trade.price) * trade.amount 
+      : (trade.price - exitPrice) * trade.amount;
+
+    // Determine which balance to update
+    const balanceField = trade.accountType === 'DEMO' ? 'demoBalance' : 'liveBalance';
+    const currentBalance = trade.accountType === 'DEMO' ? trade.user.demoBalance : trade.user.liveBalance;
+
+    // Use a transaction to ensure both updates happen correctly
+    const result = await prisma.$transaction([
+      prisma.trade.update({
         where: { id: tradeId },
         data: {
           status: 'CLOSED',
-          exitPrice,
-          pnl,
+          exitPrice: parseFloat(exitPrice),
+          pnl: pnl
         }
-      });
+      }),
+      prisma.user.update({
+        where: { id: trade.userId },
+        data: {
+          [balanceField]: currentBalance + pnl
+        }
+      })
+    ]);
 
-      // 4. Return initial capital + profit to user balance
-      // Initial capital was: trade.total (already subtracted from balance)
-      // Amount to return: trade.total + pnl
-      const amountToReturn = trade.total + pnl;
-
-      const user = await tx.user.update({
-        where: { id: session.user.id },
-        data: { balance: { increment: amountToReturn } }
-      });
-
-      return { trade, newBalance: user.balance, pnl };
-    });
-
-    return NextResponse.json(result);
+    return NextResponse.json(result[0]);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error("Close trade error:", error);
+    return NextResponse.json({ error: 'Failed to close trade' }, { status: 500 });
   }
 }

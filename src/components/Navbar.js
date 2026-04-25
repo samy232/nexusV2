@@ -148,7 +148,7 @@ export default function Navbar() {
                   <>
                     <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
                     <div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '700' }}>DEMO SETTINGS</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '700' }}>DEMO BALANCE</div>
                       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <input 
                           type="number" 
