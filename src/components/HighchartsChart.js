@@ -58,31 +58,26 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       style: { fontFamily: 'Inter, sans-serif' },
       panning: { enabled: true, type: 'x' },
       zoomType: 'x',
-      marginLeft: 10,
-      marginRight: 60 // Space for price labels on the right
+      marginLeft: 0,
+      marginRight: 60,
+      spacingTop: 0
     },
     title: { text: null },
     credits: { enabled: false },
     rangeSelector: { enabled: false },
-    navigator: { enabled: false }, // Removed clutter
-    scrollbar: { enabled: false }, // Removed clutter
+    navigator: { enabled: false },
+    scrollbar: { enabled: false },
     xAxis: {
       gridLineColor: 'rgba(255,255,255,0.03)',
       lineColor: 'rgba(255,255,255,0.1)',
       labels: { style: { color: '#666' } },
-      crosshair: {
-        color: 'rgba(255,255,255,0.2)',
-        dashStyle: 'Dash'
-      }
+      crosshair: { color: 'rgba(255,255,255,0.2)', dashStyle: 'Dash' }
     },
     yAxis: {
       gridLineColor: 'rgba(255,255,255,0.03)',
       labels: { align: 'right', x: -5, style: { color: '#666' } },
       opposite: true,
-      crosshair: {
-        color: 'rgba(255,255,255,0.2)',
-        dashStyle: 'Dash'
-      },
+      crosshair: { color: 'rgba(255,255,255,0.2)', dashStyle: 'Dash' },
       plotLines: positions.map(pos => ({
         value: pos.price,
         color: pos.type === 'BUY' ? '#22ab94' : '#f23645',
@@ -120,11 +115,12 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
     if (!chartComponentRef.current) return -100;
     const chart = chartComponentRef.current.chart;
     if (!chart || !chart.yAxis[0]) return -100;
-    return chart.yAxis[0].toPixels(p) - chart.plotTop;
+    // Get position relative to the plot area
+    return chart.yAxis[0].toPixels(p);
   };
 
   return (
-    <div className="glass" style={{ padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
+    <div className="glass" style={{ padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative' }}>
       {/* Chart Controls */}
       <div style={{ display: 'flex', gap: '0.5rem', padding: '0 0.5rem', zIndex: 20 }}>
         {intervals.map(int => (
@@ -158,8 +154,8 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
           ref={chartComponentRef}
         />
 
-        {/* Position Labels Overlay - PINNED TO LEFT */}
-        <div style={{ position: 'absolute', left: '10px', top: '0', bottom: '0', width: '200px', pointerEvents: 'none' }}>
+        {/* Position Labels Overlay - EXACTLY ON THE LINE */}
+        <div style={{ position: 'absolute', left: '0', top: '0', bottom: '0', right: '0', pointerEvents: 'none' }}>
           {positions.map(pos => {
             const y = getYPos(pos.price);
             if (y < 0 || y > 600) return null;
@@ -173,7 +169,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
               <div key={pos.id} style={{
                 position: 'absolute',
                 left: '0',
-                top: `${y + 45}px`, 
+                top: `${y}px`, 
                 transform: 'translateY(-50%)',
                 display: 'flex',
                 alignItems: 'center',
@@ -181,28 +177,24 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
                 pointerEvents: 'auto'
               }}>
                 <div style={{
-                  background: 'rgba(15, 15, 15, 0.9)',
-                  backdropFilter: 'blur(12px)',
-                  border: `1px solid ${pos.type === 'BUY' ? 'rgba(34, 171, 148, 0.6)' : 'rgba(242, 54, 69, 0.6)'}`,
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '4px',
+                  background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '0 4px 4px 0',
                   fontSize: '0.65rem',
                   color: 'white',
-                  fontWeight: '600',
+                  fontWeight: '800',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+                  boxShadow: '4px 0 15px rgba(0,0,0,0.5)',
                   whiteSpace: 'nowrap'
                 }}>
-                  <span style={{ color: pos.type === 'BUY' ? '#22ab94' : '#f23645', fontWeight: '900' }}>
-                    {pos.type} {pos.amount}
-                  </span>
-                  
+                  <span>{pos.type} {pos.amount}</span>
                   <span style={{ 
-                    color: pnl >= 0 ? '#22ab94' : '#f23645',
-                    fontFamily: 'monospace',
-                    fontWeight: '700'
+                    background: 'rgba(0,0,0,0.2)',
+                    padding: '0.1rem 0.3rem',
+                    borderRadius: '2px',
+                    fontFamily: 'monospace'
                   }}>
                     {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
                   </span>
@@ -210,27 +202,19 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
                   <button 
                     onClick={() => handleCloseTrade(pos.id)}
                     style={{
-                      background: 'rgba(255,255,255,0.1)',
+                      background: 'none',
                       border: 'none',
                       color: 'white',
-                      padding: '0.15rem 0.35rem',
-                      borderRadius: '3px',
-                      fontSize: '0.6rem',
+                      padding: '0 0.2rem',
+                      fontSize: '0.7rem',
                       fontWeight: '900',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      opacity: 0.8
                     }}
                   >
                     ✕
                   </button>
                 </div>
-                
-                {/* Horizontal Connector Line */}
-                <div style={{
-                  width: '30px',
-                  height: '1px',
-                  background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
-                  opacity: 0.3
-                }} />
               </div>
             );
           })}
