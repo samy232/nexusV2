@@ -4,6 +4,11 @@ import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
 import { useSession } from "next-auth/react";
 
+// Enable mouse wheel zoom
+if (typeof Highcharts === 'object') {
+  require('highcharts/modules/mouse-wheel-zoom')(Highcharts);
+}
+
 export default function HighchartsChart({ price, history, onIntervalChange }) {
   const chartComponentRef = useRef(null);
   const { data: session } = useSession();
@@ -51,27 +56,33 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       backgroundColor: 'transparent',
       height: 600,
       style: { fontFamily: 'Inter, sans-serif' },
-      spacingLeft: 20 // Added space for left labels
+      panning: { enabled: true, type: 'x' },
+      zoomType: 'x',
+      marginLeft: 10,
+      marginRight: 60 // Space for price labels on the right
     },
     title: { text: null },
     credits: { enabled: false },
     rangeSelector: { enabled: false },
-    navigator: {
-      enabled: true,
-      maskFill: 'rgba(41, 98, 255, 0.05)',
-      outlineColor: 'rgba(255,255,255,0.05)',
-      series: { color: 'var(--accent-primary)', fillOpacity: 0.05 }
-    },
-    scrollbar: { enabled: false },
+    navigator: { enabled: false }, // Removed clutter
+    scrollbar: { enabled: false }, // Removed clutter
     xAxis: {
-      gridLineColor: 'rgba(255,255,255,0.05)',
+      gridLineColor: 'rgba(255,255,255,0.03)',
       lineColor: 'rgba(255,255,255,0.1)',
-      labels: { style: { color: '#888' } }
+      labels: { style: { color: '#666' } },
+      crosshair: {
+        color: 'rgba(255,255,255,0.2)',
+        dashStyle: 'Dash'
+      }
     },
     yAxis: {
-      gridLineColor: 'rgba(255,255,255,0.05)',
-      labels: { align: 'right', x: -5, style: { color: '#888' } },
+      gridLineColor: 'rgba(255,255,255,0.03)',
+      labels: { align: 'right', x: -5, style: { color: '#666' } },
       opposite: true,
+      crosshair: {
+        color: 'rgba(255,255,255,0.2)',
+        dashStyle: 'Dash'
+      },
       plotLines: positions.map(pos => ({
         value: pos.price,
         color: pos.type === 'BUY' ? '#22ab94' : '#f23645',
@@ -81,9 +92,10 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       }))
     },
     tooltip: {
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: 'rgba(15, 15, 15, 0.9)',
       style: { color: '#fff' },
-      borderWidth: 0,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
       borderRadius: 8,
       shared: true
     },
@@ -99,7 +111,8 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
       name: 'BTC/USDT',
       data: history || [],
       type: 'candlestick',
-      id: 'main-series'
+      id: 'main-series',
+      dataGrouping: { enabled: false }
     }]
   };
 
@@ -113,7 +126,7 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
   return (
     <div className="glass" style={{ padding: '1rem', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
       {/* Chart Controls */}
-      <div style={{ display: 'flex', gap: '0.5rem', padding: '0 0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', padding: '0 0.5rem', zIndex: 20 }}>
         {intervals.map(int => (
           <button
             key={int.value}
@@ -145,84 +158,83 @@ export default function HighchartsChart({ price, history, onIntervalChange }) {
           ref={chartComponentRef}
         />
 
-        {/* Position Labels Overlay - LEFT SIDE */}
-        {positions.map(pos => {
-          const y = getYPos(pos.price);
-          if (y < 0 || y > 600) return null;
-          
-          const pnl = pos.type === 'BUY' 
-            ? (price - pos.price) * pos.amount 
-            : (pos.price - price) * pos.amount;
-          const pnlPercent = (pnl / (pos.price * pos.amount)) * 100;
+        {/* Position Labels Overlay - PINNED TO LEFT */}
+        <div style={{ position: 'absolute', left: '10px', top: '0', bottom: '0', width: '200px', pointerEvents: 'none' }}>
+          {positions.map(pos => {
+            const y = getYPos(pos.price);
+            if (y < 0 || y > 600) return null;
+            
+            const pnl = pos.type === 'BUY' 
+              ? (price - pos.price) * pos.amount 
+              : (pos.price - price) * pos.amount;
+            const pnlPercent = (pnl / (pos.price * pos.amount)) * 100;
 
-          return (
-            <div key={pos.id} style={{
-              position: 'absolute',
-              left: '10px',
-              top: `${y + 45}px`, // Adjusted for cleaner alignment
-              transform: 'translateY(-50%)',
-              display: 'flex',
-              alignItems: 'center',
-              zIndex: 10,
-              pointerEvents: 'auto'
-            }}>
-              <div style={{
-                background: 'rgba(15, 15, 15, 0.8)',
-                backdropFilter: 'blur(8px)',
-                border: `1px solid ${pos.type === 'BUY' ? 'rgba(34, 171, 148, 0.5)' : 'rgba(242, 54, 69, 0.5)'}`,
-                padding: '0.3rem 0.6rem',
-                borderRadius: '6px',
-                fontSize: '0.7rem',
-                color: 'white',
-                fontWeight: '600',
+            return (
+              <div key={pos.id} style={{
+                position: 'absolute',
+                left: '0',
+                top: `${y + 45}px`, 
+                transform: 'translateY(-50%)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.6rem',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
-                whiteSpace: 'nowrap'
+                zIndex: 30,
+                pointerEvents: 'auto'
               }}>
-                <span style={{ 
-                  color: pos.type === 'BUY' ? '#22ab94' : '#f23645',
-                  fontWeight: '800'
+                <div style={{
+                  background: 'rgba(15, 15, 15, 0.9)',
+                  backdropFilter: 'blur(12px)',
+                  border: `1px solid ${pos.type === 'BUY' ? 'rgba(34, 171, 148, 0.6)' : 'rgba(242, 54, 69, 0.6)'}`,
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.65rem',
+                  color: 'white',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+                  whiteSpace: 'nowrap'
                 }}>
-                  {pos.type} {pos.amount}
-                </span>
-                
-                <span style={{ 
-                  color: pnl >= 0 ? '#22ab94' : '#f23645',
-                  fontFamily: 'monospace'
-                }}>
-                  {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
-                </span>
+                  <span style={{ color: pos.type === 'BUY' ? '#22ab94' : '#f23645', fontWeight: '900' }}>
+                    {pos.type} {pos.amount}
+                  </span>
+                  
+                  <span style={{ 
+                    color: pnl >= 0 ? '#22ab94' : '#f23645',
+                    fontFamily: 'monospace',
+                    fontWeight: '700'
+                  }}>
+                    {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+                  </span>
 
-                <button 
-                  onClick={() => handleCloseTrade(pos.id)}
-                  style={{
-                    background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
-                    border: 'none',
-                    color: 'white',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.65rem',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    marginLeft: '4px'
-                  }}
-                >
-                  ✕
-                </button>
+                  <button 
+                    onClick={() => handleCloseTrade(pos.id)}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '0.15rem 0.35rem',
+                      borderRadius: '3px',
+                      fontSize: '0.6rem',
+                      fontWeight: '900',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                {/* Horizontal Connector Line */}
+                <div style={{
+                  width: '30px',
+                  height: '1px',
+                  background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
+                  opacity: 0.3
+                }} />
               </div>
-              
-              {/* Connector Line to the chart */}
-              <div style={{
-                width: '10px',
-                height: '1px',
-                background: pos.type === 'BUY' ? '#22ab94' : '#f23645',
-                opacity: 0.5
-              }} />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
