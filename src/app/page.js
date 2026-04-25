@@ -8,7 +8,7 @@ import PositionsPanel from "@/components/PositionsPanel";
 import { usePriceFeed } from "@/hooks/usePriceFeed";
 
 export default function Home() {
-  const { price } = usePriceFeed();
+  const { price, history } = usePriceFeed();
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -22,7 +22,7 @@ export default function Home() {
       }}>
         {/* Left Side: Chart and Positions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
-          <TradingViewChart />
+          <TradingViewChart price={price} history={history} />
           <PositionsPanel currentPrice={price} />
           <RecentTrades />
         </div>
@@ -46,8 +46,8 @@ export default function Home() {
         color: 'var(--text-secondary)',
         fontWeight: '500'
       }}>
-        {['BTC/USDT $42,690.00 (+2.4%)', 'ETH/USDT $2,450.12 (-1.2%)', 'SOL/USDT $145.67 (+5.8%)', 'DOT/USDT $7.23 (+0.5%)', 'LINK/USDT $18.45 (-0.1%)', 'ADA/USDT $0.58 (+1.2%)', 'MATIC/USDT $0.92 (-0.5%)'].map((ticker, i) => (
-          <span key={i}>{ticker}</span>
+        {['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'DOT/USDT', 'LINK/USDT'].map((symbol, i) => (
+          <span key={i}>{symbol} LIVE</span>
         ))}
       </div>
     </div>
