@@ -3,7 +3,6 @@ import { useState } from 'react';
 import Navbar from "@/components/Navbar";
 import HighchartsChart from "@/components/HighchartsChart";
 import TradePanel from "@/components/TradePanel";
-import OrderBook from "@/components/OrderBook";
 import RecentTrades from "@/components/RecentTrades";
 import PositionsPanel from "@/components/PositionsPanel";
 import Watchlist from "@/components/Watchlist";
@@ -16,16 +15,18 @@ const DynamicChart = dynamic(() => import("@/components/HighchartsChart"), {
 
 export default function Home() {
   const [interval, setInterval] = useState('1m');
-  const [activeTab, setActiveTab] = useState('positions'); // 'positions' or 'history'
+  const [activeTab, setActiveTab] = useState('positions'); 
   const { price, history } = usePriceFeed('BTCUSDT', interval);
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#050505', overflow: 'hidden' }}>
       <Navbar />
       
+      {/* 3-Column Pro Layout */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: '280px 1fr 320px', 
+        gridTemplateRows: '1fr 300px', // Chart Row and Bottom Panel Row
         gap: '0.75rem', 
         padding: '0.75rem',
         flex: 1,
@@ -33,9 +34,9 @@ export default function Home() {
       }}>
         
         {/* LEFT SIDEBAR: Watchlist & News */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
+        <div style={{ gridRow: '1 / span 2', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
           <Watchlist />
-          <div className="glass" style={{ height: '35%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="glass" style={{ height: '30%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', fontWeight: '700', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
               Market News
             </div>
@@ -46,7 +47,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* CENTER MAIN TERMINAL */}
+        {/* CENTER: The Pro Chart */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
           {/* Market Stats Top Bar */}
           <div className="glass" style={{ padding: '0.75rem 1.5rem', display: 'flex', gap: '2rem', alignItems: 'center' }}>
@@ -62,7 +63,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Large Pro Chart */}
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
             <DynamicChart 
               price={price} 
@@ -70,45 +70,54 @@ export default function Home() {
               onIntervalChange={setInterval}
             />
           </div>
+        </div>
 
-          {/* Bottom Tabs Panel */}
-          <div className="glass" style={{ height: '35%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', gap: '1.5rem', padding: '0 1rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              {['positions', 'history'].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    padding: '1rem 0',
-                    background: 'none',
-                    border: 'none',
-                    color: activeTab === tab ? 'white' : '#666',
-                    fontSize: '0.8rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    borderBottom: activeTab === tab ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                    textTransform: 'uppercase',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {tab === 'positions' ? 'Open Positions' : 'Trade History'}
-                </button>
-              ))}
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {activeTab === 'positions' ? (
-                <PositionsPanel currentPrice={price} />
-              ) : (
-                <RecentTrades />
-              )}
-            </div>
+        {/* RIGHT: Trade Panel (Execution Only) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
+          <TradePanel currentPrice={price} />
+          <div className="glass" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '1rem', opacity: 0.8 }}>
+             <div style={{ fontSize: '2rem' }}>⚡</div>
+             <div style={{ fontSize: '0.9rem', fontWeight: '700' }}>Instant Execution</div>
+             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Market orders are filled at best available price.</div>
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR: Execution & OrderBook */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
-          <TradePanel currentPrice={price} />
-          <OrderBook />
+        {/* EXPANDED BOTTOM PANEL: Positions & History (Spans Center and Right) */}
+        <div className="glass" style={{ 
+          gridColumn: '2 / span 2', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          overflow: 'hidden' 
+        }}>
+          <div style={{ display: 'flex', gap: '1.5rem', padding: '0 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            {['positions', 'history'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: '1.2rem 0',
+                  background: 'none',
+                  border: 'none',
+                  color: activeTab === tab ? 'white' : '#666',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === tab ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                  textTransform: 'uppercase',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {tab === 'positions' ? 'Active Positions' : 'Trade History'}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {activeTab === 'positions' ? (
+              <PositionsPanel currentPrice={price} />
+            ) : (
+              <RecentTrades />
+            )}
+          </div>
         </div>
 
       </div>
