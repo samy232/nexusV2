@@ -7,6 +7,7 @@ export function usePriceFeed(symbolId, interval = '1m') {
   const [history, setHistory] = useState([]);
   const [quote, setQuote] = useState({});
   const wsRef = useRef(null);
+  const intentionalClose = useRef(false);
   const symbolInfo = getSymbolInfo(symbolId);
 
   // Fetch OHLC History from our unified API
@@ -30,9 +31,11 @@ export function usePriceFeed(symbolId, interval = '1m') {
 
     // Clean up previous connection
     if (wsRef.current) {
+      intentionalClose.current = true;
       wsRef.current.close();
       wsRef.current = null;
     }
+    intentionalClose.current = false;
 
     if (symbolInfo.source === 'binance') {
       // CRYPTO: Use Binance WebSocket for real-time ticks
@@ -57,7 +60,9 @@ export function usePriceFeed(symbolId, interval = '1m') {
         });
       };
 
-      ws.onerror = (e) => console.error('WS error:', e);
+      ws.onerror = () => {
+        if (!intentionalClose.current) console.warn('WebSocket connection lost, will retry.');
+      };
       wsRef.current = ws;
 
     } else {
@@ -89,6 +94,7 @@ export function usePriceFeed(symbolId, interval = '1m') {
 
     return () => {
       if (wsRef.current) {
+        intentionalClose.current = true;
         wsRef.current.close();
         wsRef.current = null;
       }
