@@ -27,7 +27,10 @@ export const authOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          balance: user.balance
+          demoBalance: user.demoBalance,
+          liveBalance: user.liveBalance,
+          accountType: user.accountType,
+          leverage: user.leverage
         };
       }
     })
@@ -36,14 +39,20 @@ export const authOptions = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id;
-        session.user.balance = token.balance;
+        session.user.demoBalance = token.demoBalance;
+        session.user.liveBalance = token.liveBalance;
+        session.user.accountType = token.accountType;
+        session.user.leverage = token.leverage;
       }
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.balance = user.balance;
+        token.demoBalance = user.demoBalance;
+        token.liveBalance = user.liveBalance;
+        token.accountType = user.accountType;
+        token.leverage = user.leverage;
       }
       return token;
     }

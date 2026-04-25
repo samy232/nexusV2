@@ -7,42 +7,52 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AccountType {
+  DEMO
+  LIVE
+}
+
 model User {
-  id            String    @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?     @unique
   password      String?
   image         String?
-  balance       Float     @default(50000.0)
+  demoBalance   Float       @default(1000.0)
+  liveBalance   Float       @default(0.0)
+  accountType   AccountType @default(DEMO)
+  leverage      Float       @default(100.0)
   trades        Trade[]
   orders        Order[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Trade {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  symbol    String
-  type      String   // "BUY" or "SELL"
-  status    String   @default("OPEN") // "OPEN" or "CLOSED"
-  amount    Float
-  price     Float    // Entry Price
-  exitPrice Float?   // Exit Price
-  pnl       Float?   // Profit/Loss
-  total     Float
-  timestamp DateTime @default(now())
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  symbol      String
+  type        String      // "BUY" or "SELL"
+  status      String      @default("OPEN") // "OPEN" or "CLOSED"
+  amount      Float
+  price       Float       // Entry Price
+  exitPrice   Float?      // Exit Price
+  pnl         Float?      // Profit/Loss
+  total       Float
+  accountType AccountType @default(DEMO)
+  timestamp   DateTime    @default(now())
 }
 
 model Order {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  symbol    String
-  type      String
-  status    String
-  amount    Float
-  price     Float
-  createdAt DateTime @default(now())
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  symbol      String
+  type        String
+  status      String
+  amount      Float
+  price       Float
+  accountType AccountType @default(DEMO)
+  createdAt   DateTime    @default(now())
 }
